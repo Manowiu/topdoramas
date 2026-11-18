@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redefinir Senha - TopDoramas</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: linear-gradient(160deg, #111 0%, #0a0a0a 100%);
+      border: 1px solid #2a2a2a;
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 400px;
+      width: 90%;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(90deg, #FFD700, #FF8C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+    }
+    input:focus { outline: none; border-color: #FFD700; }
+    button {
+      width: 100%;
+      padding: 0.85rem;
+      background: linear-gradient(90deg, #FFD700, #FF8C00);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .msg { margin-top: 1rem; text-align: center; font-size: 0.85rem; }
+    .msg.error { color: #ff6b6b; }
+    .msg.success { color: #51cf66; }
+    a { color: #FFD700; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Redefinir Senha</h1>
+    <form id="resetForm">
+      <input type="password" id="newPassword" placeholder="Nova senha" minlength="6" required>
+      <input type="password" id="confirmPassword" placeholder="Confirmar senha" minlength="6" required>
+      <button type="submit">Salvar nova senha</button>
+    </form>
+    <div class="msg" id="msg"></div>
+    <p style="text-align:center; margin-top:1rem;"><a href="index.html">← Voltar ao site</a></p>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://qeporypjsrtoihdxtjoq.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_pGZjcRFm8AAlcbiab-8jXA_BB-hvILi';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById('resetForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('msg');
+      const pass = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('confirmPassword').value;
+      
+      if (pass !== confirm) {
+        msg.textContent = 'As senhas não coincidem';
+        msg.className = 'msg error';
+        return;
+      }
+      
+      const { error } = await supabase.auth.updateUser({ password: pass });
+      if (error) {
+        msg.textContent = error.message;
+        msg.className = 'msg error';
+      } else {
+        msg.textContent = 'Senha alterada! Redirecionando...';
+        msg.className = 'msg success';
+        setTimeout(() => window.location.href = 'index.html', 2000);
+      }
+    };
+  </script>
+</body>
+</html>
