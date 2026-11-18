@@ -1002,8 +1002,27 @@
               <span>${item.year}</span>
               <span class="rating">★ ${item.rating}</span>
             </div>
+            <button class="add-cart-card-btn" data-title="${item.title.replace(/"/g, '"')}" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">+ Carrinho</button>
+            <button class="details-card-btn" style="margin-top:0.3rem;width:100%;background:transparent;border:1px solid #444;color:#aaa;padding:0.35rem;border-radius:6px;font-size:0.7rem;cursor:pointer;">Ver detalhes</button>
           </div>
         `;
+        const addBtn = card.querySelector('.add-cart-card-btn');
+        addBtn.onclick = (e) => {
+          e.stopPropagation();
+          const title = addBtn.dataset.title;
+          if (!cart.includes(title)) {
+            cart.push(title);
+            updateCartUI();
+            addBtn.textContent = '✓ No carrinho';
+            addBtn.style.background = '#333';
+            addBtn.style.color = '#aaa';
+          }
+        };
+        const detailsBtn = card.querySelector('.details-card-btn');
+        detailsBtn.onclick = (e) => {
+          e.stopPropagation();
+          openModal(item);
+        };
         card.addEventListener('click', () => openModal(item));
         grid.appendChild(card);
       });
@@ -1489,17 +1508,20 @@
       try {
         const res = await fetch(CRIAR_PAGAMENTO_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer sb_publishable_pGZjcRFm8AAlcbiab-8jXA_BB-hvILi'
+          },
           body: JSON.stringify(body)
         });
         const json = await res.json();
         if (!json.success) {
-          alert(json.message || json.error || 'Erro ao criar pagamento');
+          alert(json.message || json.error || 'Erro ao criar pagamento: ' + JSON.stringify(json));
           return null;
         }
         return json.data;
       } catch (e) {
-        alert('Erro de conexão');
+        alert('Erro de conexão: ' + e.message);
         console.error(e);
         return null;
       }
