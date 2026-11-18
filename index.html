@@ -1621,7 +1621,12 @@
       if (!item) return;
 
       // Títulos que estão no R2 privado (precisam de URL assinada)
-      const r2Titles = ['O CEO que Sentiu Minha Gravidez'];
+      const r2Titles = [
+        'O CEO que Sentiu Minha Gravidez',
+        'Ele Devia Tudo a Mim',
+        'Fui Entregue a um Mafioso à Beira da Morte',
+        'Você Cancelou o Nosso Casamento, Então Eu Casei com o Seu Rival'
+      ];
 
       if (r2Titles.includes(title)) {
         if (!supabaseClient) { alert('Faça login para assistir'); return; }
