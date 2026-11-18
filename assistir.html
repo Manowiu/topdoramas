@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistir - TopDoramas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      background: #0a0a0a;
+      border-bottom: 1px solid #222;
+    }
+    header a {
+      color: #FFD700;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      max-width: 70%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .player-wrap {
+      max-width: 1100px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+    video {
+      width: 100%;
+      max-height: 75vh;
+      background: #000;
+      border-radius: 12px;
+    }
+    .no-video {
+      aspect-ratio: 16/9;
+      background: #111;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      gap: 0.5rem;
+    }
+    .no-video span:first-child { font-size: 3rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="catalogo-filmes.html">← Voltar</a>
+    <h1 id="title">Carregando...</h1>
+    <div></div>
+  </header>
+
+  <div class="player-wrap">
+    <video id="player" controls autoplay>
+      Seu navegador não suporta vídeo.
+    </video>
+    <div class="no-video" id="noVideo" style="display:none;">
+      <span>▶</span>
+      <span>Vídeo não disponível</span>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('title') || 'Dorama';
+    const video = params.get('video');
+
+    document.getElementById('title').textContent = title;
+    document.title = title + ' - TopDoramas';
+
+    const player = document.getElementById('player');
+    const noVideo = document.getElementById('noVideo');
+
+    if (video) {
+      player.src = video;
+      player.style.display = 'block';
+      noVideo.style.display = 'none';
+    } else {
+      player.style.display = 'none';
+      noVideo.style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
