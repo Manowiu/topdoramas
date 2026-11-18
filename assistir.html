@@ -54,8 +54,9 @@
     }
     video {
       width: 100%;
-      max-height: 75vh;
-      background: #000;
+      max-height: 80vh;
+      min-height: 240px;
+      background: #111;
       border-radius: 12px;
     }
     .no-video {
@@ -112,6 +113,11 @@
       player.src = video;
       player.style.display = 'block';
       noVideo.style.display = 'none';
+      player.onerror = () => {
+        player.style.display = 'none';
+        noVideo.style.display = 'flex';
+        noVideo.querySelector('span:last-child').textContent = 'Este link de vídeo expirou. Envie um link novo.';
+      };
     } else {
       player.style.display = 'none';
       noVideo.style.display = 'flex';
