@@ -1627,7 +1627,7 @@
         "Fui Entregue a um Mafioso à Beira da Morte": "https://mvi-r2-videos.mvi-oficial.workers.dev/video/MVI-Doramas/118%20-%20Fui%20Entregue%20a%20um%20Mafioso%20%C3%80%20Beira%20da%20Morte%20%28Dublado%29/Fui%20Entregue%20a%20um%20Mafioso%20%C3%80%20Beira%20da%20Morte%20%28Dublado%29.mp4?expires=1795033556&sig=1b68f7870c78dd12a921cae9c13e967e020e7fbc85a74b1453f7bed2012b2446",
         "Você Cancelou o Nosso Casamento, Então Eu Casei com o Seu Rival": "https://mvi-r2-videos.mvi-oficial.workers.dev/video/MVI-Doramas/138%20-%20Voc%C3%AA%20Cancelou%20Nosso%20Casamento%2C%20Ent%C3%A3o%20Casei%20com%20Seu%20Rival%20%28Dublado%29/138%20-%20Voc%C3%AA%20Cancelou%20Nosso%20Casamento%2C%20Ent%C3%A3o%20Casei%20com%20Seu%20Rival%20%28Dublado%29.mp4?expires=1795033671&sig=7bdf7aaa993d8c17bd580b3772a0dc6a7de45deb6deecd835e689e10066b8293"
       };
-      const videoUrl = item.videoUrl || videos[title];
+      const videoUrl = item.videoUrl || (item.episodes && item.episodes[0] && item.episodes[0].videoUrl) || videos[title];
       
       // Abre página dedicada do player
       const params = new URLSearchParams({ title: title, video: videoUrl || '' });
