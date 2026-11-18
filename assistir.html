@@ -55,12 +55,17 @@
       color: #666;
       gap: 0.5rem;
     }
-    .no-video span:first-child { font-size: 3rem; }
+    @media (max-width: 700px) {
+      header { padding: 0.7rem 1rem; }
+      h1 { font-size: 0.95rem; max-width: 60%; }
+      .player-wrap { margin: 0.5rem auto; padding: 0 0.5rem; }
+      video { max-height: 60vh; border-radius: 8px; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <a href="catalogo-filmes.html">← Voltar</a>
+    <a href="index.html">← Voltar</a>
     <h1 id="title">Carregando...</h1>
     <div></div>
   </header>
