@@ -1226,6 +1226,7 @@
       document.getElementById('checkoutModal').classList.add('open');
       document.getElementById('checkoutForm').style.display = 'block';
       document.getElementById('pixResult').style.display = 'none';
+      openCheckout();
     };
 
     // Re-render simples
@@ -1471,6 +1472,28 @@
     }
 
     let currentPurchaseTitle = null;
+    let pendingPurchase = null;
+
+    function trackMeta(event, params) {
+      if (typeof fbq === 'function') fbq('track', event, params);
+    }
+
+    function checkoutEventParams() {
+      const titles = (currentPurchaseTitle || cart.join(', ')).split(', ').filter(Boolean);
+      const qty = titles.length || cart.length || 1;
+      return {
+        value: Number(calcPrice(qty).toFixed(2)),
+        currency: 'BRL',
+        content_type: 'product',
+        content_ids: titles,
+        contents: titles.map(id => ({ id, quantity: 1 })),
+        num_items: qty
+      };
+    }
+
+    function openCheckout() {
+      trackMeta('InitiateCheckout', checkoutEventParams());
+    }
 
     window.comprarDorama = function(title) {
       currentPurchaseTitle = title;
@@ -1478,6 +1501,7 @@
       document.getElementById('checkoutModal').classList.add('open');
       document.getElementById('checkoutForm').style.display = 'block';
       document.getElementById('pixResult').style.display = 'none';
+      openCheckout();
     };
 
     document.getElementById('closeCheckout').onclick = () => {
@@ -1537,13 +1561,20 @@
       }
       document.getElementById('pixCopy').value = data.pix.copy_paste || data.pix.qr_code || '';
       document.getElementById('pixStatus').textContent = 'Aguardando pagamento... (atualiza automaticamente)';
+      pendingPurchase = checkoutEventParams();
       // A confirmação chega via webhook + sync da tabela purchases
       const checkInterval = setInterval(async () => {
         await syncPurchasesFromSupabase();
         const userId = await getCurrentUserId();
         const library = getLibrary(userId);
-        if (library.includes(currentPurchaseTitle)) {
+        const titles = (currentPurchaseTitle || '').split(', ').filter(Boolean);
+        const paid = titles.length && titles.every(t => library.includes(t) || library.includes(currentPurchaseTitle));
+        if (paid) {
           clearInterval(checkInterval);
+          if (pendingPurchase) {
+            trackMeta('Purchase', pendingPurchase);
+            pendingPurchase = null;
+          }
           document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
           document.getElementById('pixStatus').style.color = '#2ecc71';
           cart = [];
@@ -1819,6 +1850,7 @@
       document.getElementById('checkoutModal').classList.add('open');
       document.getElementById('checkoutForm').style.display = 'block';
       document.getElementById('pixResult').style.display = 'none';
+      openCheckout();
     }
 
     // Escuta mudanças de sessão
