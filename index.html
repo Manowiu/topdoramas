@@ -301,6 +301,64 @@
       .promo-card h2 { font-size: 1.6rem; }
       .ver-titulos { position: static; margin-top: 1rem; display: inline-block; }
       .combo-grid { grid-template-columns: 1fr; }
+      
+      /* Header mobile */
+      header { padding: 0.8rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+      .logo img { height: 36px; }
+      .auth-area { gap: 0.4rem; }
+      .auth-btn, .cart-btn, .my-doramas-btn, .logout-btn { 
+        padding: 0.35rem 0.7rem; 
+        font-size: 0.75rem; 
+      }
+      
+      /* Grid mobile */
+      .container { padding: 1rem; }
+      .grid { 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 0.75rem; 
+      }
+      .card img { height: 220px; }
+      .card-info h3 { font-size: 0.85rem; }
+      .card-info { padding: 0.5rem; }
+      
+      /* Filters */
+      .filters { padding: 0.8rem 1rem; }
+      .filter-btn { padding: 0.35rem 0.7rem; font-size: 0.75rem; }
+      
+      /* Modal mobile */
+      .modal-content { 
+        grid-template-columns: 1fr; 
+        max-height: 95vh;
+        padding: 1rem;
+      }
+      .modal-content img { max-height: 200px; object-fit: cover; }
+      
+      /* Cart bar mobile */
+      .cart-bar { 
+        padding: 0.7rem 1rem; 
+        font-size: 0.85rem;
+      }
+      .cart-bar-btn { padding: 0.5rem 1rem; font-size: 0.8rem; }
+      
+      /* Cookie banner */
+      .cookie-banner { 
+        flex-direction: column; 
+        text-align: center;
+        padding: 0.8rem 1rem;
+      }
+      
+      /* Footer */
+      .footer-links { 
+        font-size: 0.7rem; 
+        gap: 0.6rem;
+        padding: 1rem 0.5rem;
+      }
+    }
+    
+    @media (max-width: 400px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .card img { height: 180px; }
+      .promo-card h2 { font-size: 1.3rem; }
     }
 
     /* Auth Modal - Card style */
