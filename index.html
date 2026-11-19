@@ -847,7 +847,7 @@
       <button class="close" id="closeAdmin">&times;</button>
       <h2 style="margin-bottom:1rem;">Painel Admin</h2>
       
-      <h3 style="font-size:1rem; margin:1.2rem 0 0.6rem; color:var(--yellow);">Adicionar Dorama</h3>
+      <h3 style="font-size:1rem; margin:1.2rem 0 0.6rem; color:var(--yellow);" id="adminFormTitle">Adicionar Dorama</h3>
       <form id="addDoramaForm">
         <div class="form-group">
           <label>Título</label>
@@ -884,7 +884,8 @@
           <label>Episódios (um por linha: Título|URL)</label>
           <textarea id="newEpisodes" rows="4" placeholder="Episódio 1|https://...mp4&#10;Episódio 2|https://...mp4" style="width:100%;padding:0.75rem;background:#161616;border:1px solid #2a2a2a;border-radius:10px;color:#fff;font-size:0.85rem;"></textarea>
         </div>
-        <button type="submit" class="submit-btn">Adicionar</button>
+        <button type="submit" class="submit-btn" id="adminSubmitBtn">Adicionar</button>
+        <button type="button" id="adminCancelEdit" style="display:none;margin-top:0.5rem;width:100%;background:#333;color:#fff;border:none;padding:0.7rem;border-radius:8px;cursor:pointer;">Cancelar edição</button>
       </form>
 
       <h3 style="font-size:1rem; margin:1.5rem 0 0.6rem; color:var(--yellow);">Doramas Cadastrados</h3>
@@ -1821,24 +1822,66 @@
       safeSetJSON('topdoramas_catalog', doramas);
     }
 
-    // Mescla doramas adicionados pelo admin (localStorage) sem sobrescrever o código
+    // Mescla: itens do admin sobrescrevem o código pelo título; novos são adicionados
     const stored = getStoredDoramas();
     if (stored && stored.length) {
-      const codeTitles = new Set(doramas.map(d => d.title));
+      const byTitle = new Map(doramas.map((d, i) => [d.title, i]));
       stored.forEach(d => {
-        if (d && d.title && !codeTitles.has(d.title)) doramas.push(d);
+        if (!d || !d.title) return;
+        if (byTitle.has(d.title)) {
+          doramas[byTitle.get(d.title)] = d;
+        } else {
+          doramas.push(d);
+        }
       });
     }
+
+    let editingIndex = null;
 
     function renderAdminList() {
       const list = document.getElementById('adminList');
       list.innerHTML = doramas.map((d, i) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #333;">
-          <span style="font-size:0.9rem;">${d.title}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #333; gap:0.5rem;">
+          <span style="font-size:0.9rem; flex:1;">${d.title}</span>
+          <button onclick="editDorama(${i})" style="background:#333; color:#FFD700; border:none; padding:0.3rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.75rem;">Editar</button>
           <button onclick="removeDorama(${i})" style="background:#ff4444; color:white; border:none; padding:0.3rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.75rem;">Remover</button>
         </div>
       `).join('') || '<p style="color:#888;">Nenhum dorama cadastrado</p>';
     }
+
+    function resetAdminForm() {
+      editingIndex = null;
+      document.getElementById('addDoramaForm').reset();
+      document.getElementById('adminFormTitle').textContent = 'Adicionar Dorama';
+      document.getElementById('adminSubmitBtn').textContent = 'Adicionar';
+      document.getElementById('adminCancelEdit').style.display = 'none';
+      document.getElementById('episodesGroup').style.display = 'none';
+    }
+
+    window.editDorama = function(index) {
+      const d = doramas[index];
+      if (!d) return;
+      editingIndex = index;
+      document.getElementById('newTitle').value = d.title || '';
+      document.getElementById('newYear').value = d.year || 2024;
+      document.getElementById('newRating').value = d.rating || 8;
+      document.getElementById('newGenres').value = (d.genres || []).join(', ');
+      document.getElementById('newOverview').value = d.overview || '';
+      document.getElementById('newPoster').value = d.poster || '';
+      document.getElementById('newType').value = d.type === 'series' ? 'series' : 'movie';
+      document.getElementById('episodesGroup').style.display = d.type === 'series' ? 'block' : 'none';
+      if (d.episodes && d.episodes.length) {
+        document.getElementById('newEpisodes').value = d.episodes.map(ep => (ep.title || 'Episódio') + '|' + (ep.videoUrl || '')).join('\n');
+      } else {
+        document.getElementById('newEpisodes').value = '';
+      }
+      document.getElementById('adminFormTitle').textContent = 'Editar Dorama';
+      document.getElementById('adminSubmitBtn').textContent = 'Salvar';
+      document.getElementById('adminCancelEdit').style.display = 'block';
+      document.getElementById('adminModal').scrollTop = 0;
+    };
+
+    document.getElementById('adminCancelEdit').onclick = resetAdminForm;
 
     window.removeDorama = function(index) {
       if (confirm('Remover este dorama?')) {
@@ -1875,6 +1918,16 @@
           const parts = line.split('|');
           return { title: (parts[0] || 'Episódio').trim(), videoUrl: (parts[1] || '').trim() };
         });
+      }
+      if (editingIndex !== null) {
+        doramas[editingIndex] = newDorama;
+        saveDoramas();
+        resetAdminForm();
+        renderAdminList();
+        renderFilters();
+        renderDoramas();
+        alert('Dorama atualizado!');
+        return;
       }
       doramas.push(newDorama);
       saveDoramas();
