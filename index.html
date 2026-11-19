@@ -1700,12 +1700,14 @@
       safeSetJSON('topdoramas_catalog', doramas);
     }
 
-    // Catálogo vem sempre do código (localStorage do admin não sobrescreve)
-    // const stored = getStoredDoramas();
-    // if (stored && stored.length) {
-    //   doramas.length = 0;
-    //   doramas.push(...stored);
-    // }
+    // Mescla doramas adicionados pelo admin (localStorage) sem sobrescrever o código
+    const stored = getStoredDoramas();
+    if (stored && stored.length) {
+      const codeTitles = new Set(doramas.map(d => d.title));
+      stored.forEach(d => {
+        if (d && d.title && !codeTitles.has(d.title)) doramas.push(d);
+      });
+    }
 
     function renderAdminList() {
       const list = document.getElementById('adminList');
