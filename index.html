@@ -847,7 +847,12 @@
       <button class="close" id="closeAdmin">&times;</button>
       <h2 style="margin-bottom:1rem;">Painel Admin</h2>
       
-      <h3 style="font-size:1rem; margin:1.2rem 0 0.6rem; color:var(--yellow);" id="adminFormTitle">Adicionar Dorama</h3>
+      <h3 style="font-size:1rem; margin:1.2rem 0 0.6rem; color:var(--yellow);">Adicionar vários de uma vez</h3>
+      <p style="font-size:0.75rem;color:#888;margin-bottom:0.4rem;">Um por linha. Opcional: Título|URL da capa</p>
+      <textarea id="bulkTitles" rows="6" placeholder="O Chefe da Favela|https://...webp&#10;Sua Doce Bela" style="width:100%;padding:0.75rem;background:#161616;border:1px solid #2a2a2a;border-radius:10px;color:#fff;font-size:0.85rem;"></textarea>
+      <button type="button" id="bulkAddBtn" class="submit-btn" style="margin-top:0.5rem;">Adicionar lista</button>
+
+      <h3 style="font-size:1rem; margin:1.2rem 0 0.6rem; color:var(--yellow);" id="adminFormTitle">Adicionar um</h3>
       <form id="addDoramaForm">
         <div class="form-group">
           <label>Título</label>
@@ -1891,6 +1896,38 @@
         renderFilters();
         renderDoramas();
       }
+    };
+
+    document.getElementById('bulkAddBtn').onclick = () => {
+      const raw = document.getElementById('bulkTitles').value.trim();
+      if (!raw) return;
+      const existing = new Set(doramas.map(d => d.title.toLowerCase()));
+      let added = 0;
+      raw.split('\n').forEach(line => {
+        const parts = line.split('|');
+        const title = (parts[0] || '').trim();
+        const poster = (parts[1] || '').trim() || 'https://via.placeholder.com/500x750/111111/FFD700?text=TopDoramas';
+        if (!title || existing.has(title.toLowerCase())) return;
+        existing.add(title.toLowerCase());
+        doramas.push({
+          title,
+          year: 2025,
+          rating: 8.0,
+          genres: ['Romance', 'Drama'],
+          overview: title + '.',
+          poster,
+          director: '—',
+          duration: 'Mini-drama'
+        });
+        added++;
+      });
+      if (!added) { alert('Nenhum título novo'); return; }
+      saveDoramas();
+      document.getElementById('bulkTitles').value = '';
+      renderAdminList();
+      renderFilters();
+      renderDoramas();
+      alert(added + ' título(s) adicionado(s)');
     };
 
     document.getElementById('newType').onchange = (e) => {
