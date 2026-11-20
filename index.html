@@ -1354,9 +1354,37 @@
     let vodItems = [];
     let vodHasMore = false;
 
+    async function ensureVip() {
+      if (window.isVip) return true;
+      if (!supabaseClient) {
+        document.getElementById('authModal').classList.add('open');
+        return false;
+      }
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        document.getElementById('authModal').classList.add('open');
+        return false;
+      }
+      const isAdmin = session.user.email === 'admin@topdoramas.com' || session.user.user_metadata?.role === 'admin';
+      if (isAdmin) { window.isVip = true; return true; }
+      const { data } = await supabaseClient
+        .from('purchases')
+        .select('id')
+        .eq('email', session.user.email)
+        .eq('dorama_title', 'Assinatura VIP')
+        .eq('status', 'paid')
+        .limit(1);
+      if (data && data.length) { window.isVip = true; return true; }
+      document.getElementById('vipModal').classList.add('open');
+      return false;
+    }
+
     function playStream(title, url) {
       if (!url) { alert('Vídeo indisponível'); return; }
-      window.location.href = 'assistir.html?' + new URLSearchParams({ title: title || 'VOD', video: url }).toString();
+      ensureVip().then(ok => {
+        if (!ok) return;
+        window.location.href = 'assistir.html?' + new URLSearchParams({ title: title || 'VOD', video: url }).toString();
+      });
     }
 
     function renderVodGrid() {

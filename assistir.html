@@ -98,6 +98,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const title = params.get('title') || 'Dorama';
@@ -109,19 +110,33 @@
     const player = document.getElementById('player');
     const noVideo = document.getElementById('noVideo');
 
-    if (video) {
+    function showBlocked(msg) {
+      player.style.display = 'none';
+      noVideo.style.display = 'flex';
+      noVideo.querySelector('span:last-child').textContent = msg;
+    }
+
+    function startVideo() {
+      if (!video) { showBlocked('Vídeo não disponível'); return; }
       player.src = video;
       player.style.display = 'block';
       noVideo.style.display = 'none';
-      player.onerror = () => {
-        player.style.display = 'none';
-        noVideo.style.display = 'flex';
-        noVideo.querySelector('span:last-child').textContent = 'Este link de vídeo expirou. Envie um link novo.';
-      };
-    } else {
-      player.style.display = 'none';
-      noVideo.style.display = 'flex';
+      player.onerror = () => showBlocked('Este link de vídeo expirou. Envie um link novo.');
     }
+
+    async function gate() {
+      const isVod = video && video.includes('nixplay.lat');
+      if (!isVod) { startVideo(); return; }
+      const supabaseClient = supabase.createClient('https://qeporypjsrtoihdxtjoq.supabase.co', 'sb_publishable_pGZjcRFm8AAlcbiab-8jXA_BB-hvILi');
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { showBlocked('Assine o VIP para assistir.'); return; }
+      const isAdmin = session.user.email === 'admin@topdoramas.com' || session.user.user_metadata?.role === 'admin';
+      if (isAdmin) { startVideo(); return; }
+      const { data } = await supabaseClient.from('purchases').select('id').eq('email', session.user.email).eq('dorama_title', 'Assinatura VIP').eq('status', 'paid').limit(1);
+      if (data && data.length) startVideo();
+      else showBlocked('Assine o VIP para assistir.');
+    }
+    gate();
   </script>
 </body>
 </html>
