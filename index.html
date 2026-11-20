@@ -1385,6 +1385,15 @@
       53: 'Suspense', 10752: 'Guerra', 37: 'Faroeste'
     };
 
+    const MOVIE_GENRES = ['Ação', 'Aventura', 'Animação', 'Biografia', 'Comédia', 'Crime', 'Documentário', 'Drama', 'Família', 'Fantasia', 'Faroeste', 'Ficção científica', 'Guerra', 'História', 'Mistério', 'Musical', 'Policial', 'Romance', 'Suspense', 'Terror'];
+    const GENRE_LABELS = {
+      action: 'Ação', adventure: 'Aventura', animation: 'Animação', biography: 'Biografia', comedy: 'Comédia',
+      crime: 'Crime', documentary: 'Documentário', drama: 'Drama', family: 'Família', fantasy: 'Fantasia',
+      western: 'Faroeste', 'science fiction': 'Ficção científica', 'sci-fi': 'Ficção científica',
+      war: 'Guerra', history: 'História', mystery: 'Mistério', musical: 'Musical', music: 'Música',
+      romance: 'Romance', thriller: 'Suspense', suspense: 'Suspense', horror: 'Terror'
+    };
+
     function genreNames(value) {
       const fields = value && typeof value === 'object' && !Array.isArray(value)
         ? [value.genres, value.genre_names, value.genreNames, value.tmdb_genres, value.genre_ids, value.genre, value.categories, value.category]
@@ -1397,14 +1406,18 @@
         if (typeof item === 'object') item = item.name || item.title || item.id || '';
         const raw = String(item).trim();
         if (/^\d+$/.test(raw)) return TMDB_GENRES[Number(raw)] || '';
-        return /^(filme|filmes|movie|movies|vod)$/i.test(raw) ? '' : raw;
+        if (/^(filme|filmes|movie|movies|vod)$/i.test(raw)) return '';
+        return GENRE_LABELS[raw.toLowerCase()] || raw;
       }).filter(Boolean))];
     }
 
     function updateCatalogGenreOptions(items) {
       const select = document.getElementById('catalogGenreFilter');
       if (!select) return;
-      const genres = [...new Set(items.flatMap(item => genreNames(item)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const genres = [...new Set([
+        ...items.flatMap(item => genreNames(item)),
+        ...(vodSource === 'movies' ? MOVIE_GENRES : [])
+      ])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
       const validSelection = catalogGenre === 'all' || genres.includes(catalogGenre);
       if (!validSelection) catalogGenre = 'all';
       select.innerHTML = '<option value="all">Todos</option>' + genres.map(genre =>
