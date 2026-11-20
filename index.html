@@ -808,6 +808,16 @@
       </div>
       <small style="color:var(--muted);">Para mini-dramas avulsos de R$ 10,90. A partir de 4 títulos, pague R$ 5,00 por título. Não inclui Streaming ou Telegram.</small>
     </section>
+    <section id="shortDramaVipPromo" aria-label="Conheça a assinatura VIP" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.2rem;margin-bottom:1rem;color:var(--text);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <span style="display:inline-block;background:#222;color:var(--yellow);border-radius:999px;padding:.3rem .7rem;font-size:.65rem;font-weight:800;letter-spacing:.12em;">ASSINATURA VIP</span>
+          <h2 style="font-size:clamp(1.45rem,4vw,2rem);line-height:1.1;margin:.65rem 0 .4rem;">Quer acesso ao catálogo completo?</h2>
+          <p style="font-size:.9rem;color:var(--muted);">Com o VIP, assista a filmes e séries para assinantes. Escolha entre planos semanal, mensal, semestral ou vitalício.</p>
+        </div>
+        <button type="button" onclick="document.getElementById('vipModal').classList.add('open')" style="background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;border-radius:10px;padding:.7rem 1rem;font-weight:800;cursor:pointer;">Ver planos VIP</button>
+      </div>
+    </section>
     <div class="grid" id="grid"></div>
     <div id="vodMoreWrap" style="text-align:center;padding:1rem 0;display:none;">
       <button id="vodMore" class="filter-btn" type="button">Carregar mais</button>
@@ -1682,7 +1692,9 @@
 
     async function showNovelinhas() {
       const promo = document.getElementById('shortDramaPromo');
+      const vipPromo = document.getElementById('shortDramaVipPromo');
       if (promo) promo.style.display = '';
+      if (vipPromo) vipPromo.style.display = '';
       renderDoramas(currentFilter);
       try {
         if (!nixSeries) {
@@ -1739,7 +1751,9 @@
       document.getElementById('sideMenu').classList.remove('open');
       const genreBar = document.getElementById('filters');
       const promo = document.getElementById('shortDramaPromo');
+      const vipPromo = document.getElementById('shortDramaVipPromo');
       if (promo) promo.style.display = source === 'loja' ? '' : 'none';
+      if (vipPromo) vipPromo.style.display = source === 'loja' ? '' : 'none';
       if (source === 'loja') {
         if (genreBar) genreBar.style.display = '';
         document.getElementById('vodMoreWrap').style.display = 'none';
