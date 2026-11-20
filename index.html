@@ -1316,7 +1316,7 @@
       return [...new Set(values.map(item => {
         if (typeof item === 'object') item = item.name || item.title || item.id || '';
         const raw = String(item).trim();
-        if (/^\\d+$/.test(raw)) return TMDB_GENRES[Number(raw)] || '';
+        if (/^\d+$/.test(raw)) return TMDB_GENRES[Number(raw)] || '';
         return /^(filme|filmes|movie|movies|vod)$/i.test(raw) ? '' : raw;
       }).filter(Boolean))];
     }
