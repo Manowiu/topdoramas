@@ -791,22 +791,22 @@
   <div class="filters" id="filters"></div>
 
   <div class="container" id="catalogo">
-    <section id="shortDramaPromo" aria-label="Preços dos mini-dramas avulsos" style="display:none;background:#12243a;border:1px solid #294968;border-radius:18px;padding:1.25rem;margin-bottom:1rem;color:#fff;">
+    <section id="shortDramaPromo" aria-label="Preços dos mini-dramas avulsos" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.25rem;margin-bottom:1rem;color:#fff;">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;">
         <div>
-          <span style="display:inline-block;background:#1d4564;color:#b9e3ff;border-radius:999px;padding:.3rem .7rem;font-size:.65rem;font-weight:800;letter-spacing:.12em;">MINI-DRAMAS AVULSOS</span>
+          <span style="display:inline-block;background:#222;color:var(--yellow);border-radius:999px;padding:.3rem .7rem;font-size:.65rem;font-weight:800;letter-spacing:.12em;">MINI-DRAMAS AVULSOS</span>
           <h2 style="font-size:clamp(1.8rem,5vw,2.5rem);line-height:1.05;margin:.8rem 0 .55rem;">Escolha. Compre. Assista.</h2>
-          <p style="font-size:.9rem;color:#d5e7f7;">Leve somente as histórias que quiser. Seus títulos ficam reunidos em <strong>Meus Doramas</strong>.</p>
+          <p style="font-size:.9rem;color:var(--muted);">Leve somente as histórias que quiser. Seus títulos ficam reunidos em <strong>Meus Doramas</strong>.</p>
         </div>
-        <button type="button" onclick="document.getElementById('grid').scrollIntoView({behavior:'smooth',block:'start'})" style="background:transparent;color:#fff;border:1px solid #41627e;border-radius:12px;padding:.65rem 1rem;font-weight:700;cursor:pointer;">Ver títulos ↓</button>
+        <button type="button" onclick="document.getElementById('grid').scrollIntoView({behavior:'smooth',block:'start'})" style="background:transparent;color:#fff;border:1px solid var(--border);border-radius:12px;padding:.65rem 1rem;font-weight:700;cursor:pointer;">Ver títulos ↓</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.6rem;margin:1.2rem 0 .8rem;">
-        <div style="background:#1a3047;border:1px solid #304d68;border-radius:14px;padding:.8rem;"><small>1 mini-drama</small><strong style="display:block;font-size:1.35rem;">R$ 10,90</strong></div>
-        <div style="background:#1a3047;border:1px solid #304d68;border-radius:14px;padding:.8rem;"><small>2 mini-dramas</small><strong style="display:block;font-size:1.35rem;">R$ 15,90</strong></div>
-        <div style="background:#1a3047;border:1px solid #304d68;border-radius:14px;padding:.8rem;"><small>3 mini-dramas</small><strong style="display:block;font-size:1.35rem;">R$ 17,90</strong></div>
-        <div style="background:#1d3b56;border:1px solid #73b9e8;border-radius:14px;padding:.8rem;"><small>4 ou mais</small><strong style="display:block;font-size:1.35rem;">R$ 5,00 <small style="font-size:.7rem;">/cada</small></strong></div>
+        <div style="background:var(--card-hover);border:1px solid var(--border);border-radius:14px;padding:.8rem;"><small>1 mini-drama</small><strong style="display:block;font-size:1.35rem;">R$ 10,90</strong></div>
+        <div style="background:var(--card-hover);border:1px solid var(--border);border-radius:14px;padding:.8rem;"><small>2 mini-dramas</small><strong style="display:block;font-size:1.35rem;">R$ 15,90</strong></div>
+        <div style="background:var(--card-hover);border:1px solid var(--border);border-radius:14px;padding:.8rem;"><small>3 mini-dramas</small><strong style="display:block;font-size:1.35rem;">R$ 17,90</strong></div>
+        <div style="background:#1a1a1a;border:1px solid var(--yellow);border-radius:14px;padding:.8rem;"><small>4 ou mais</small><strong style="display:block;font-size:1.35rem;">R$ 5,00 <small style="font-size:.7rem;">/cada</small></strong></div>
       </div>
-      <small style="color:#bdd1e3;">Para mini-dramas avulsos de R$ 10,90. A partir de 4 títulos, pague R$ 5,00 por título. Não inclui Streaming ou Telegram.</small>
+      <small style="color:var(--muted);">Para mini-dramas avulsos de R$ 10,90. A partir de 4 títulos, pague R$ 5,00 por título. Não inclui Streaming ou Telegram.</small>
     </section>
     <div class="grid" id="grid"></div>
     <div id="vodMoreWrap" style="text-align:center;padding:1rem 0;display:none;">
