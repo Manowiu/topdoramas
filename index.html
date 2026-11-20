@@ -2088,7 +2088,7 @@
       if (!append) grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Carregando catálogo...</p>';
       if (type === 'movies') {
         const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
-        const json = await (await fetch(url)).json();
+        const json = await fetchNixJson(url, 15000);
         if (requestVersion !== vodRequestVersion || vodSource !== type) return;
         const data = (json.data || []).map(normalizeNixMovie);
         vodItems = append ? vodItems.concat(data) : data;
@@ -2238,14 +2238,14 @@
       if (allMovieItemsPromise) return allMovieItemsPromise;
       allMovieItemsPromise = (async () => {
         const firstUrl = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=1`;
-        const firstJson = await (await fetch(firstUrl)).json();
+        const firstJson = await fetchNixJson(firstUrl, 15000);
         const all = [...(firstJson.data || [])];
         const totalPages = Math.max(1, Number(firstJson.pagination?.total_pages) || 1);
         for (let start = 2; start <= totalPages; start += 6) {
           const pages = Array.from({ length: Math.min(6, totalPages - start + 1) }, (_, i) => start + i);
           const batches = await Promise.all(pages.map(async page => {
             const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
-            const json = await (await fetch(url)).json();
+            const json = await fetchNixJson(url, 15000);
             return json.data || [];
           }));
           batches.forEach(items => all.push(...items));
