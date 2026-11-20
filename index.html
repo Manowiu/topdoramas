@@ -1949,14 +1949,18 @@
 
     let vodAll = [];
     let nixSeries = null;
+    let nixSeriesCategories = null;
 
     function seriesBucket(item) {
-      const g = (typeof item === 'string' ? item : (item.genre || '')).toLowerCase();
-      const n = (typeof item === 'string' ? '' : (item.name || item.title || '')).toLowerCase();
-      if (/anima|anime|donghua|animation/.test(g)) return 'animes';
-      if (/mini.?s.rie|miniseries|mini.?drama|micro.?drama/.test(g + ' ' + n)) return 'novelinhas';
-      if (g.includes('soap') || /novela|novelinha/.test(g) || /novela|novelinha/.test(n)) return 'series';
-      if (g.includes('drama')) return 'doramas';
+      const text = typeof item === 'string'
+        ? item.toLowerCase()
+        : [item.category_name, item.categoryName, item.category, item.genre, item.country, item.language, item.name, item.title]
+            .filter(Boolean).join(' ').toLowerCase();
+      if (/anima|anime|donghua|animation/.test(text)) return 'animes';
+      if (/mini.?s.rie|miniseries|mini.?drama|micro.?drama/.test(text)) return 'novelinhas';
+      if (/soap|novela|novelinha/.test(text)) return 'series';
+      // "Drama" sozinho é amplo; Doramas exige uma indicação asiática explícita.
+      if (/dorama|k.?drama|c.?drama|j.?drama|korean|korea|chinese|china|japanese|japan|thai|asian|asiatic/.test(text)) return 'doramas';
       return 'series';
     }
 
@@ -1977,6 +1981,13 @@
         if (!nixSeries) {
           const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
           nixSeries = await (await fetch(url)).json();
+        }
+        if (!nixSeriesCategories) {
+          const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_categories`;
+          try { nixSeriesCategories = await (await fetch(url)).json(); } catch (e) { nixSeriesCategories = []; }
+          const categoryList = Array.isArray(nixSeriesCategories) ? nixSeriesCategories : [];
+          const categories = new Map(categoryList.map(category => [String(category.category_id), category.category_name || '']));
+          nixSeries = (Array.isArray(nixSeries) ? nixSeries : []).map(item => ({ ...item, category_name: item.category_name || categories.get(String(item.category_id)) || '' }));
         }
         if (requestVersion !== vodRequestVersion || vodSource !== type) return;
         vodAll = nixSeries.filter(s => seriesBucket(s) === type).map(s => ({
