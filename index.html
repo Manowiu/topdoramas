@@ -120,6 +120,7 @@
       background: linear-gradient(180deg,#ff4d6d,#ff8a00); color: #fff;
       border-radius: 16px; padding: .35rem .7rem; margin-top: -18px;
     }
+    .bottom-nav .nav-vip.vip-active { background:linear-gradient(180deg,#34d399,#059669);color:#fff; }
     .cart-bar { bottom: 62px; }
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
@@ -841,7 +842,7 @@
   <nav class="bottom-nav">
     <button onclick="window.scrollTo({top:0,behavior:'smooth'})"><span>⌂</span><span>Início</span></button>
     <button onclick="document.getElementById('catalogSearch').focus()"><span>⌕</span><span>Buscar</span></button>
-    <button class="nav-vip" id="navCart"><span>🛒</span><span>Carrinho</span></button>
+    <button class="nav-vip" id="navVipButton" type="button" aria-label="Seja VIP"><span>♛</span><span id="navVipLabel">Seja VIP</span></button>
     <button id="navLibrary"><span>▣</span><span>Meus</span></button>
     <button id="navProfile"><span>☺</span><span>Perfil</span></button>
   </nav>
@@ -1405,6 +1406,16 @@
       return VIP_PLANS.mensal;
     }
 
+    function updateVipNav() {
+      const button = document.getElementById('navVipButton');
+      const label = document.getElementById('navVipLabel');
+      if (!button) return;
+      const active = !!window.isVip;
+      button.classList.toggle('vip-active', active);
+      button.setAttribute('aria-label', active ? 'VIP ativo' : 'Seja VIP');
+      if (label) label.textContent = active ? 'VIP ativo' : 'Seja VIP';
+    }
+
     function hasActiveVip(purchases, includeWeekly = true) {
       const now = Date.now();
       return (purchases || []).some(purchase => {
@@ -1482,14 +1493,14 @@
         return false;
       }
       const isAdmin = session.user.email === 'admin@topdoramas.com' || session.user.user_metadata?.role === 'admin';
-      if (isAdmin) { window.isVip = true; return true; }
+      if (isAdmin) { window.isVip = true; updateVipNav(); return true; }
       const { data } = await supabaseClient
         .from('purchases')
         .select('dorama_title, created_at')
         .eq('email', session.user.email)
         .eq('status', 'paid')
         .like('dorama_title', 'Assinatura VIP%');
-      window.isVip = hasActiveVip(data || [], false);
+      window.isVip = hasActiveVip(data || [], false);\n      updateVipNav();
       if (window.isVip) return true;
       document.getElementById('vipModal').classList.add('open');
       return false;
@@ -1825,8 +1836,8 @@
       document.getElementById('heroTitle').textContent = featured.title;
       document.getElementById('heroPlay').onclick = () => openModal(featured);
     }
-    const navCart = document.getElementById('navCart');
-    if (navCart) navCart.onclick = () => document.getElementById('cartBtn').click();
+    const navVipButton = document.getElementById('navVipButton');
+    if (navVipButton) navVipButton.onclick = () => document.getElementById('vipModal').classList.add('open');
     const navLibrary = document.getElementById('navLibrary');
     if (navLibrary) navLibrary.onclick = () => {
       const btn = document.getElementById('myDoramasBtn');
