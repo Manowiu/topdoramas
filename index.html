@@ -861,7 +861,7 @@
       </button>
     </div>
     <div class="header-search" id="headerSearchBar" hidden>
-      <input id="catalogSearch" type="search" placeholder="Buscar títulos..." aria-label="Buscar títulos">
+      <input id="catalogSearch" type="search" placeholder="Buscar em todos os catálogos..." aria-label="Buscar títulos em todos os catálogos">
     </div>
   </header>
     <nav class="catalog-tabs" id="catalogTabs" aria-label="Guias do catálogo">
@@ -2224,6 +2224,8 @@
       if (!query) {
         const controls = document.getElementById('catalogControls');
         if (controls) controls.style.display = vodSource === 'loja' ? '' : 'none';
+        const genreBar = document.getElementById('filters');
+        if (genreBar) genreBar.style.display = vodSource === 'loja' ? '' : 'none';
         const requestBtn = document.getElementById('requestBtn');
         if (requestBtn) requestBtn.style.display = vodSource === 'loja' ? '' : 'none';
         const catalogHeading = document.getElementById('catalogHeading');
