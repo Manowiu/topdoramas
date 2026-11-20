@@ -1638,7 +1638,17 @@
       searchButton.setAttribute('aria-expanded', String(opening));
       if (opening) document.getElementById('catalogSearch').focus();
     };
-    document.getElementById('headerProfile').onclick = () => document.getElementById('openAuth').click();
+    document.getElementById('headerProfile').onclick = () => {
+      const loginButton = document.getElementById('openAuth');
+      if (loginButton) {
+        loginButton.click();
+        return;
+      }
+      const accountMenu = document.getElementById('sideMenu');
+      if (accountMenu) accountMenu.classList.add('open');
+      const accountArea = document.getElementById('authArea');
+      if (accountArea) accountArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
     document.getElementById('closeMenu').onclick = () => document.getElementById('sideMenu').classList.remove('open');
     const VIP_PLANS = {
       semanal: { label: 'Semanal', days: 7, price: 9.90, displayPrice: 'R$ 9,90', purchaseTitle: 'Assinatura VIP - Semanal' },
