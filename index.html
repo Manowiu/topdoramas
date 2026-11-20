@@ -1873,7 +1873,7 @@
                 season,
                 episode: n,
                 language: leg ? 'Legendado' : 'Dublado',
-                stream_url: `https://nixplay.lat/series/${encodeURIComponent(NIX_USER)}/${encodeURIComponent(NIX_PASS)}/${encodeURIComponent(String(item.id_tmdb || item.tmdb_id || item.series_id))}/${season}/${n}.mp4` + (leg ? '?lang=leg' : '')
+                stream_url: `https://nixplay.lat/series/${NIX_USER}/${NIX_PASS}/${item.series_id}/${season}/${n}.mp4` + (leg ? '?lang=leg' : '')
               });
             });
           });
@@ -1947,26 +1947,6 @@
       modal.classList.add('open');
     }
 
-    function nixDirectMovieUrl(movie) {
-      const streamId = movie.id_tmdb ?? movie.tmdb_id ?? movie.id;
-      if (streamId == null || streamId === '') return movie.stream_url || movie.mp4_url || '';
-      const title = movie.title || movie.name || '';
-      const isLegendado = !!movie.is_legendado || /\[L\]|legendado/i.test(title) || String(movie.audio || '').toLowerCase() === 'leg';
-      const base = `https://nixplay.lat/movie/${encodeURIComponent(NIX_USER)}/${encodeURIComponent(NIX_PASS)}/${encodeURIComponent(String(streamId))}.mp4`;
-      return base + (isLegendado ? '?lang=leg' : '');
-    }
-    function normalizeNixMovie(movie) {
-      return {
-        ...movie,
-        title: movie.title || movie.name || movie.movie_name || '',
-        poster: movie.poster || movie.cover || movie.stream_icon || '',
-        year: movie.year || movie.ano || movie.releaseDate || '',
-        synopsis: movie.overview || movie.sinopse || movie.plot || '',
-        type: 'movie',
-        stream_url: nixDirectMovieUrl(movie)
-      };
-    }
-
     let vodAll = [];
     let nixSeries = null;
     let nixSeriesCategories = null;
@@ -1984,21 +1964,17 @@
       const titleOverride = SERIES_TITLE_OVERRIDES.find(([pattern]) => pattern.test(normalizedTitle));
       if (titleOverride) return titleOverride[1];
 
-      const categoryValue = typeof item === 'string' ? item : item.category;
-      const nestedCategory = categoryValue && typeof categoryValue === 'object'
-        ? (categoryValue.category_name || categoryValue.name || categoryValue.title || '')
-        : categoryValue;
       const text = typeof item === 'string'
         ? item.toLowerCase()
         : [
-            item.category_name, item.categoryName, nestedCategory, item.category_title,
+            item.category_name, item.categoryName, item.category, item.category_title,
             item.genre, item.genres, item.country, item.country_name, item.language,
             item.original_language, item.language_code, item.type, item.stream_type,
             item.name, item.title
           ].filter(Boolean).join(' ').toLowerCase();
       const category = typeof item === 'string'
         ? item.toLowerCase()
-        : [item.category_name, item.categoryName, nestedCategory, item.category_title].filter(Boolean).join(' ').toLowerCase();
+        : [item.category_name, item.categoryName, item.category, item.category_title].filter(Boolean).join(' ').toLowerCase();
       const mediaDetails = typeof item === 'string'
         ? text
         : [item.genre, item.genres, item.country, item.country_name, item.language, item.original_language, item.language_code, item.type, item.stream_type].filter(Boolean).join(' ').toLowerCase();
@@ -2016,62 +1992,23 @@
       return 'series';
     }
 
-    async function fetchNixJson(url, timeoutMs = 12000) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok) throw new Error(`Nix Play respondeu HTTP ${response.status}`);
-        return await response.json();
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-
     let nixSeriesLoadPromise = null;
     async function ensureNixSeriesCatalog() {
       if (!nixSeriesLoadPromise) {
         nixSeriesLoadPromise = (async () => {
-          let rawSeries = [];
-          const xtreamUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
-          try {
-            const xtream = await fetchNixJson(xtreamUrl, 15000);
-            rawSeries = Array.isArray(xtream) ? xtream : (xtream.data || xtream.series || []);
-          } catch (xtreamError) {
-            console.warn('Lista Xtream indisponível; tentando o catálogo de séries.', xtreamError);
-          }
-
-          if (!Array.isArray(rawSeries) || !rawSeries.length) {
-            const firstUrl = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=series&page=1`;
-            const firstJson = await fetchNixJson(firstUrl, 12000);
-            rawSeries = Array.isArray(firstJson) ? firstJson : (firstJson.data || firstJson.series || []);
-            const totalPages = Math.max(1, Number(firstJson.pagination?.total_pages) || 1);
-            for (let start = 2; start <= totalPages; start += 6) {
-              const pages = Array.from({ length: Math.min(6, totalPages - start + 1) }, (_, index) => start + index);
-              const batch = await Promise.all(pages.map(async page => {
-                const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=series&page=${page}`;
-                const json = await fetchNixJson(url, 12000);
-                return Array.isArray(json) ? json : (json.data || json.series || []);
-              }));
-              batch.forEach(items => rawSeries.push(...items));
-            }
-          }
-
-          if (!Array.isArray(rawSeries) || !rawSeries.length) throw new Error('O Nix Play não retornou séries.');
+          const seriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
+          const rawSeries = await (await fetch(seriesUrl)).json();
           let categoriesPayload = [];
           const categoriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_categories`;
-          try { categoriesPayload = await fetchNixJson(categoriesUrl, 7000); } catch (e) {}
+          try { categoriesPayload = await (await fetch(categoriesUrl)).json(); } catch (e) {}
           const categoryList = Array.isArray(categoriesPayload) ? categoriesPayload : (categoriesPayload?.categories || categoriesPayload?.data || []);
           const categories = new Map(categoryList.map(category => [
             String(category.category_id ?? category.id ?? ''),
             category.category_name || category.name || ''
           ]));
-          nixSeries = rawSeries.map(item => ({
+          nixSeries = (Array.isArray(rawSeries) ? rawSeries : []).map(item => ({
             ...item,
-            name: item.name || item.title || item.series_name || '',
-            cover: item.cover || item.poster || item.stream_icon || '',
-            series_id: item.series_id ?? item.id_tmdb ?? item.tmdb_id ?? item.stream_id ?? item.id,
-            category_name: item.category_name || item.categoryName || (typeof item.category === 'string' ? item.category : item.category?.category_name || item.category?.name) || categories.get(String(item.category_id ?? item.category?.category_id ?? (typeof item.category === 'number' ? item.category : ''))) || ''
+            category_name: item.category_name || item.categoryName || categories.get(String(item.category_id ?? '')) || ''
           }));
           nixSeriesCategories = categoriesPayload;
           return nixSeries;
@@ -2088,9 +2025,9 @@
       if (!append) grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Carregando catálogo...</p>';
       if (type === 'movies') {
         const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
-        const json = await fetchNixJson(url, 15000);
+        const json = await (await fetch(url)).json();
         if (requestVersion !== vodRequestVersion || vodSource !== type) return;
-        const data = (json.data || []).map(normalizeNixMovie);
+        const data = json.data || [];
         vodItems = append ? vodItems.concat(data) : data;
         vodAll = [];
         vodPage = page;
@@ -2100,15 +2037,14 @@
         const seriesCatalog = await ensureNixSeriesCatalog();
         if (requestVersion !== vodRequestVersion || vodSource !== type) return;
         vodAll = seriesCatalog.filter(s => seriesBucket(s) === type).map(s => ({
-          title: s.name || s.title || s.series_name,
-          poster: s.cover || s.poster || s.stream_icon,
+          title: s.name,
+          poster: s.cover,
           backdrop: Array.isArray(s.backdrop_path) ? s.backdrop_path[0] : s.backdrop_path,
           year: (s.releaseDate || '').slice(0, 4),
           synopsis: s.plot || '',
           genres: s.genre || type,
           type: 'serie',
-          series_id: s.series_id,
-          id_tmdb: s.id_tmdb || s.tmdb_id || s.series_id
+          series_id: s.series_id
         }));
         vodItems = [];
         vodPage = 1;
@@ -2238,14 +2174,14 @@
       if (allMovieItemsPromise) return allMovieItemsPromise;
       allMovieItemsPromise = (async () => {
         const firstUrl = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=1`;
-        const firstJson = await fetchNixJson(firstUrl, 15000);
+        const firstJson = await (await fetch(firstUrl)).json();
         const all = [...(firstJson.data || [])];
         const totalPages = Math.max(1, Number(firstJson.pagination?.total_pages) || 1);
         for (let start = 2; start <= totalPages; start += 6) {
           const pages = Array.from({ length: Math.min(6, totalPages - start + 1) }, (_, i) => start + i);
           const batches = await Promise.all(pages.map(async page => {
             const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
-            const json = await fetchNixJson(url, 15000);
+            const json = await (await fetch(url)).json();
             return json.data || [];
           }));
           batches.forEach(items => all.push(...items));
@@ -2325,11 +2261,11 @@
             title: raw.name || raw.title, poster: raw.cover || raw.poster,
             backdrop: Array.isArray(raw.backdrop_path) ? raw.backdrop_path[0] : raw.backdrop_path,
             year: (raw.releaseDate || '').slice(0, 4), synopsis: raw.plot || '',
-            genres: raw.genre || bucket, type: 'serie', series_id: raw.series_id, id_tmdb: raw.id_tmdb || raw.tmdb_id || raw.series_id
+            genres: raw.genre || bucket, type: 'serie', series_id: raw.series_id
           };
           if (normalizeSearchText(item.title).includes(needle)) matches.push({ item, source: bucket });
         });
-        addMatches(movieCatalog.map(normalizeNixMovie), 'movies');
+        addMatches(movieCatalog, 'movies');
         matches.sort((a, b) => String(a.item.title || a.item.name || '').localeCompare(String(b.item.title || b.item.name || ''), 'pt-BR'));
         if (requestVersion === globalSearchVersion) renderGlobalSearchResults(matches.slice(0, 96), query);
       } catch (error) {
