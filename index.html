@@ -1998,6 +1998,7 @@
       const allowedSources = ['loja', 'doramas', 'movies', 'series', 'animes'];
       if (!allowedSources.includes(source)) source = 'loja';
       vodSource = source;
+      try { sessionStorage.setItem('topdoramas_catalog', source); } catch (e) {}
       const catalogHeading = document.getElementById('catalogHeading');
       const catalogTitles = { loja: 'Novelinhas Nacionais e Internacionais', doramas: 'Doramas em Destaque', movies: 'Filmes em Destaque', series: 'Séries Imperdíveis', animes: 'Animes em Alta' };
       if (catalogHeading) catalogHeading.textContent = catalogTitles[source] || 'Destaques da Semana';
@@ -2045,10 +2046,32 @@
       selectVodSource(source, false);
     });
 
-    document.getElementById('vodMore').onclick = () => {
-      if (vodSource === 'loja' || !vodHasMore) return;
-      if (vodSource === 'movies') loadVod('movies', vodPage + 1, true);
-      else { vodPage += 1; renderVodGrid(); }
+    let vodMoreLoading = false;
+    document.getElementById('vodMore').onclick = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const urlCatalog = new URLSearchParams(window.location.search).get('catalog');
+      let savedCatalog = '';
+      try { savedCatalog = sessionStorage.getItem('topdoramas_catalog') || ''; } catch (e) {}
+      const requestedSource = urlCatalog || savedCatalog || vodSource;
+      if (!['loja', 'doramas', 'movies', 'series', 'animes'].includes(requestedSource)) return;
+      if (requestedSource !== vodSource) {
+        selectVodSource(requestedSource, false);
+        return;
+      }
+      if (requestedSource === 'loja' || !vodHasMore || vodMoreLoading) return;
+      vodMoreLoading = true;
+      const moreButton = document.getElementById('vodMore');
+      moreButton.disabled = true;
+      try {
+        if (requestedSource === 'movies') await loadVod('movies', vodPage + 1, true);
+        else { vodPage += 1; renderVodGrid(); }
+      } catch (err) {
+        console.error('Erro ao carregar mais títulos:', err);
+      } finally {
+        vodMoreLoading = false;
+        moreButton.disabled = false;
+      }
     };
 
     let searchQuery = '';
@@ -2217,7 +2240,9 @@
     renderDoramas = function(filter) {
       _origRender(filter);
     };
-    const initialCatalog = new URLSearchParams(window.location.search).get('catalog') || 'loja';
+    let initialCatalog = new URLSearchParams(window.location.search).get('catalog');
+    if (!initialCatalog) { try { initialCatalog = sessionStorage.getItem('topdoramas_catalog'); } catch (e) {} }
+    initialCatalog = initialCatalog || 'loja';
     selectVodSource(initialCatalog, false);
     updateCartUI();
 
