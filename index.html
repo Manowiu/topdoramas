@@ -1873,7 +1873,7 @@
                 season,
                 episode: n,
                 language: leg ? 'Legendado' : 'Dublado',
-                stream_url: `https://nixplay.lat/series/${NIX_USER}/${NIX_PASS}/${item.series_id}/${season}/${n}.mp4` + (leg ? '?lang=leg' : '')
+                stream_url: `https://nixplay.lat/series/${encodeURIComponent(NIX_USER)}/${encodeURIComponent(NIX_PASS)}/${encodeURIComponent(String(item.id_tmdb || item.tmdb_id || item.series_id))}/${season}/${n}.mp4` + (leg ? '?lang=leg' : '')
               });
             });
           });
@@ -1945,6 +1945,26 @@
         cartBtn.style.display = 'none';
       }
       modal.classList.add('open');
+    }
+
+    function nixDirectMovieUrl(movie) {
+      const streamId = movie.id_tmdb ?? movie.tmdb_id ?? movie.id;
+      if (streamId == null || streamId === '') return movie.stream_url || movie.mp4_url || '';
+      const title = movie.title || movie.name || '';
+      const isLegendado = !!movie.is_legendado || /\[L\]|legendado/i.test(title) || String(movie.audio || '').toLowerCase() === 'leg';
+      const base = `https://nixplay.lat/movie/${encodeURIComponent(NIX_USER)}/${encodeURIComponent(NIX_PASS)}/${encodeURIComponent(String(streamId))}.mp4`;
+      return base + (isLegendado ? '?lang=leg' : '');
+    }
+    function normalizeNixMovie(movie) {
+      return {
+        ...movie,
+        title: movie.title || movie.name || movie.movie_name || '',
+        poster: movie.poster || movie.cover || movie.stream_icon || '',
+        year: movie.year || movie.ano || movie.releaseDate || '',
+        synopsis: movie.overview || movie.sinopse || movie.plot || '',
+        type: 'movie',
+        stream_url: nixDirectMovieUrl(movie)
+      };
     }
 
     let vodAll = [];
@@ -2057,7 +2077,7 @@
         const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
         const json = await (await fetch(url)).json();
         if (requestVersion !== vodRequestVersion || vodSource !== type) return;
-        const data = json.data || [];
+        const data = (json.data || []).map(normalizeNixMovie);
         vodItems = append ? vodItems.concat(data) : data;
         vodAll = [];
         vodPage = page;
@@ -2074,7 +2094,8 @@
           synopsis: s.plot || '',
           genres: s.genre || type,
           type: 'serie',
-          series_id: s.series_id
+          series_id: s.series_id,
+          id_tmdb: s.id_tmdb || s.tmdb_id || s.series_id
         }));
         vodItems = [];
         vodPage = 1;
@@ -2291,11 +2312,11 @@
             title: raw.name || raw.title, poster: raw.cover || raw.poster,
             backdrop: Array.isArray(raw.backdrop_path) ? raw.backdrop_path[0] : raw.backdrop_path,
             year: (raw.releaseDate || '').slice(0, 4), synopsis: raw.plot || '',
-            genres: raw.genre || bucket, type: 'serie', series_id: raw.series_id
+            genres: raw.genre || bucket, type: 'serie', series_id: raw.series_id, id_tmdb: raw.id_tmdb || raw.tmdb_id || raw.series_id
           };
           if (normalizeSearchText(item.title).includes(needle)) matches.push({ item, source: bucket });
         });
-        addMatches(movieCatalog, 'movies');
+        addMatches(movieCatalog.map(normalizeNixMovie), 'movies');
         matches.sort((a, b) => String(a.item.title || a.item.name || '').localeCompare(String(b.item.title || b.item.name || ''), 'pt-BR'));
         if (requestVersion === globalSearchVersion) renderGlobalSearchResults(matches.slice(0, 96), query);
       } catch (error) {
