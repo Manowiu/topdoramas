@@ -2044,6 +2044,7 @@
           `;
           document.getElementById('logoutBtn').onclick = async () => {
             await supabaseClient.auth.signOut();
+            window.isVip = false;
             updateAuthUI();
           };
           const myBtn = document.getElementById('myDoramasBtn');
@@ -2526,6 +2527,7 @@
 
     closeAuthBtn.onclick = () => {
       authModal.classList.remove('open');
+      window.pendingVipPlan = null;
       authMessage.textContent = '';
       authMessage.className = 'auth-message';
     };
@@ -2658,7 +2660,9 @@
     // Escuta mudanças de sessão
     if (supabaseClient) {
       supabaseClient.auth.onAuthStateChange(() => {
+        window.isVip = false;
         updateAuthUI();
+        syncPurchasesFromSupabase();
         openCheckoutAfterAuth();
         openVipCheckoutAfterAuth();
       });
