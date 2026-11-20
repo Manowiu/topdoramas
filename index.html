@@ -2016,38 +2016,51 @@
       return 'series';
     }
 
+    async function fetchNixJson(url, timeoutMs = 12000) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error(`Nix Play respondeu HTTP ${response.status}`);
+        return await response.json();
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
     let nixSeriesLoadPromise = null;
     async function ensureNixSeriesCatalog() {
       if (!nixSeriesLoadPromise) {
         nixSeriesLoadPromise = (async () => {
           let rawSeries = [];
+          const xtreamUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
           try {
+            const xtream = await fetchNixJson(xtreamUrl, 15000);
+            rawSeries = Array.isArray(xtream) ? xtream : (xtream.data || xtream.series || []);
+          } catch (xtreamError) {
+            console.warn('Lista Xtream indisponível; tentando o catálogo de séries.', xtreamError);
+          }
+
+          if (!Array.isArray(rawSeries) || !rawSeries.length) {
             const firstUrl = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=series&page=1`;
-            const firstJson = await (await fetch(firstUrl)).json();
+            const firstJson = await fetchNixJson(firstUrl, 12000);
             rawSeries = Array.isArray(firstJson) ? firstJson : (firstJson.data || firstJson.series || []);
             const totalPages = Math.max(1, Number(firstJson.pagination?.total_pages) || 1);
             for (let start = 2; start <= totalPages; start += 6) {
               const pages = Array.from({ length: Math.min(6, totalPages - start + 1) }, (_, index) => start + index);
               const batch = await Promise.all(pages.map(async page => {
                 const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=series&page=${page}`;
-                const json = await (await fetch(url)).json();
+                const json = await fetchNixJson(url, 12000);
                 return Array.isArray(json) ? json : (json.data || json.series || []);
               }));
               batch.forEach(items => rawSeries.push(...items));
             }
-          } catch (catalogError) {
-            console.warn('Catálogo de séries Nix Play indisponível; usando a lista Xtream.', catalogError);
           }
 
-          if (!Array.isArray(rawSeries) || !rawSeries.length) {
-            const fallbackUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
-            const fallback = await (await fetch(fallbackUrl)).json();
-            rawSeries = Array.isArray(fallback) ? fallback : (fallback.data || fallback.series || []);
-          }
-
+          if (!Array.isArray(rawSeries) || !rawSeries.length) throw new Error('O Nix Play não retornou séries.');
           let categoriesPayload = [];
           const categoriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_categories`;
-          try { categoriesPayload = await (await fetch(categoriesUrl)).json(); } catch (e) {}
+          try { categoriesPayload = await fetchNixJson(categoriesUrl, 7000); } catch (e) {}
           const categoryList = Array.isArray(categoriesPayload) ? categoriesPayload : (categoriesPayload?.categories || categoriesPayload?.data || []);
           const categories = new Map(categoryList.map(category => [
             String(category.category_id ?? category.id ?? ''),
