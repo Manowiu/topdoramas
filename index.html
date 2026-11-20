@@ -1297,16 +1297,34 @@
     let catalogGenre = 'all';
     let catalogSort = 'default';
 
+    const TMDB_GENRES = {
+      28: 'Ação', 12: 'Aventura', 16: 'Animação', 35: 'Comédia', 80: 'Crime',
+      99: 'Documentário', 18: 'Drama', 10751: 'Família', 14: 'Fantasia',
+      36: 'História', 27: 'Terror', 10402: 'Música', 9648: 'Mistério',
+      10749: 'Romance', 878: 'Ficção científica', 10770: 'Telefilme',
+      53: 'Suspense', 10752: 'Guerra', 37: 'Faroeste'
+    };
+
     function genreNames(value) {
-      const values = Array.isArray(value) ? value : String(value || '').split(',').flatMap(part => part.split('|')).flatMap(part => part.split('/'));
-      return values.map(item => typeof item === 'object' ? (item.name || item.title || '') : String(item))
-        .map(name => name.trim()).filter(Boolean);
+      const fields = value && typeof value === 'object' && !Array.isArray(value)
+        ? [value.genres, value.genre_names, value.genreNames, value.tmdb_genres, value.genre_ids, value.genre, value.categories, value.category]
+        : [value];
+      const values = fields.flatMap(field => {
+        if (Array.isArray(field)) return field;
+        return String(field || '').split(',').flatMap(part => part.split('|')).flatMap(part => part.split('/'));
+      });
+      return [...new Set(values.map(item => {
+        if (typeof item === 'object') item = item.name || item.title || item.id || '';
+        const raw = String(item).trim();
+        if (/^\\d+$/.test(raw)) return TMDB_GENRES[Number(raw)] || '';
+        return /^(filme|filmes|movie|movies|vod)$/i.test(raw) ? '' : raw;
+      }).filter(Boolean))];
     }
 
     function updateCatalogGenreOptions(items) {
       const select = document.getElementById('catalogGenreFilter');
       if (!select) return;
-      const genres = [...new Set(items.flatMap(item => genreNames(item.genres)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const genres = [...new Set(items.flatMap(item => genreNames(item)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
       const validSelection = catalogGenre === 'all' || genres.includes(catalogGenre);
       if (!validSelection) catalogGenre = 'all';
       select.innerHTML = '<option value="all">Todos</option>' + genres.map(genre =>
