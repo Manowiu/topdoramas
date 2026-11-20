@@ -9,8 +9,8 @@ const R2_ACCOUNT_ID = Deno.env.get('R2_ACCOUNT_ID')!
 const R2_ACCESS_KEY_ID = Deno.env.get('R2_ACCESS_KEY_ID')!
 const R2_SECRET_ACCESS_KEY = Deno.env.get('R2_SECRET_ACCESS_KEY')!
 const R2_BUCKET = Deno.env.get('R2_BUCKET') || 'doramas'
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
+const SUPABASE_URL = Deno.env.get('PROJECT_URL')!
+const SUPABASE_ANON_KEY = Deno.env.get('PROJECT_ANON_KEY')!
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,9 +21,10 @@ const corsHeaders = {
 // Mapeia título do dorama para o nome do arquivo no R2
 const videoKeys: Record<string, string> = {
   'O CEO que Sentiu Minha Gravidez': 'ceo.mp4',
-  // Adicione os outros aqui conforme subir no R2:
-  // 'Ele Devia Tudo a Mim': 'ele-devia.mp4',
-  // 'Fui Entregue a um Mafioso à Beira da Morte': 'mafioso.mp4',
+  'Ele Devia Tudo a Mim': 'eledeviatudoamim.mp4',
+  'Fui Entregue a um Mafioso à Beira da Morte': 'fuientregueaomafioso.mp4',
+  'Você Cancelou o Nosso Casamento, Então Eu Casei com o Seu Rival': 'vocecancelounossocasamento.mp4',
+  'Casada com o Bilionário Sem Saber': 'casadacombilionario.mp4',
 }
 
 Deno.serve(async (req) => {
@@ -63,15 +64,14 @@ Deno.serve(async (req) => {
     // Verifica se comprou
     const { data: purchase } = await supabase
       .from('purchases')
-      .select('id')
+      .select('id, dorama_title')
       .eq('email', user.email)
-      .eq('dorama_title', title)
       .eq('status', 'paid')
-      .maybeSingle()
+      .or(`dorama_title.eq.${title},dorama_title.eq.Assinatura VIP`)
 
-    // Admin tem acesso a tudo
+    const hasAccess = purchase && purchase.length > 0
     const isAdmin = user.email === 'admin@topdoramas.com' || user.user_metadata?.role === 'admin'
-    if (!purchase && !isAdmin) {
+    if (!hasAccess && !isAdmin) {
       return new Response(JSON.stringify({ error: 'Você não comprou este dorama' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
