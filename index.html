@@ -764,10 +764,18 @@
     <input id="catalogSearch" type="search" placeholder="Buscar filmes...">
   </div>
 
+  <div class="filters" id="vodSources">
+    <button class="filter-btn active" data-src="loja" type="button">Loja</button>
+    <button class="filter-btn" data-src="movies" type="button">Filmes</button>
+    <button class="filter-btn" data-src="series" type="button">Séries</button>
+  </div>
   <div class="filters" id="filters"></div>
 
   <div class="container" id="catalogo">
     <div class="grid" id="grid"></div>
+    <div id="vodMoreWrap" style="text-align:center;padding:1rem 0;display:none;">
+      <button id="vodMore" class="filter-btn" type="button">Carregar mais</button>
+    </div>
     <button class="request-btn" id="requestBtn">💬 Não achou o título? Peça aqui</button>
   </div>
 
@@ -1337,12 +1345,145 @@
 
     renderFilters();
 
+    const NIX_USER = 'manowiu-vods';
+    const NIX_PASS = 'Koala56252';
+    let vodSource = 'loja';
+    let vodPage = 1;
+    let vodItems = [];
+    let vodHasMore = false;
+
+    function playStream(title, url) {
+      if (!url) { alert('Vídeo indisponível'); return; }
+      window.location.href = 'assistir.html?' + new URLSearchParams({ title: title || 'VOD', video: url }).toString();
+    }
+
+    function renderVodGrid() {
+      grid.innerHTML = '';
+      const q = (document.getElementById('catalogSearch')?.value || '').trim().toLowerCase();
+      const list = q ? vodItems.filter(i => (i.title || '').toLowerCase().includes(q)) : vodItems;
+      if (!list.length) {
+        grid.innerHTML = '<p style="color:#888;padding:1rem;">Nenhum título nesta página.</p>';
+      }
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const isSeries = item.type === 'serie' || (item.episodes && item.episodes.length > 1);
+        card.innerHTML = `
+          ${isSeries ? '<span class="series-badge">SÉRIE</span>' : ''}
+          <img src="${item.poster || ''}" alt="" onerror="this.src='https://via.placeholder.com/500x750/111111/FFD700?text=VOD'">
+          <div class="card-info">
+            <h3>${item.title || ''}</h3>
+            <div class="meta"><span>${item.year || ''}</span></div>
+            <button class="details-card-btn" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,#b4233a,#ff4d6d);color:#fff;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">${isSeries ? 'Episódios' : 'Assistir'}</button>
+          </div>`;
+        card.querySelector('button').onclick = (e) => { e.stopPropagation(); openVod(item); };
+        card.onclick = () => openVod(item);
+        grid.appendChild(card);
+      });
+      const more = document.getElementById('vodMoreWrap');
+      if (more) more.style.display = vodHasMore ? 'block' : 'none';
+    }
+
+    function openVod(item) {
+      document.getElementById('modalPoster').src = item.poster || '';
+      document.getElementById('modalTitle').textContent = item.title || '';
+      document.getElementById('modalYear').textContent = item.year || '';
+      document.getElementById('modalRating').textContent = '';
+      document.getElementById('modalDirector').textContent = 'VOD';
+      document.getElementById('modalDuration').textContent = item.episodes && item.episodes.length > 1 ? (item.episodes_count || item.episodes.length) + ' episódios' : 'Filme';
+      document.getElementById('modalOverview').textContent = item.synopsis || '';
+      document.getElementById('modalGenres').innerHTML = `<span class="tag">${item.genres || 'VOD'}</span>`;
+
+      let episodesEl = document.getElementById('modalEpisodes');
+      if (!episodesEl) {
+        episodesEl = document.createElement('div');
+        episodesEl.id = 'modalEpisodes';
+        document.querySelector('#modal .modal-content > div').appendChild(episodesEl);
+      }
+      if (item.episodes && item.episodes.length) {
+        episodesEl.style.display = 'block';
+        episodesEl.innerHTML = '<h4 style="margin:0.6rem 0;color:#FFD700;">Episódios</h4>' + item.episodes.map(ep => `
+          <div class="episode-item" style="display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid #222;cursor:pointer;">
+            <span>T${ep.season} E${ep.episode} · ${ep.language || ''}</span>
+            <span style="color:#FFD700;">▶</span>
+          </div>`).join('');
+        [...episodesEl.querySelectorAll('.episode-item')].forEach((el, i) => {
+          el.onclick = () => playStream(item.title + ' E' + item.episodes[i].episode, item.episodes[i].stream_url);
+        });
+      } else {
+        episodesEl.style.display = 'none';
+        episodesEl.innerHTML = '';
+      }
+
+      let cartBtn = document.getElementById('modalCartBtn');
+      if (!cartBtn) {
+        cartBtn = document.createElement('button');
+        cartBtn.id = 'modalCartBtn';
+        cartBtn.style.cssText = 'margin-top:1rem;width:100%;border:none;padding:0.7rem;border-radius:8px;font-weight:700;cursor:pointer;';
+        document.querySelector('#modal .modal-content > div').appendChild(cartBtn);
+      }
+      if (item.stream_url && !(item.episodes && item.episodes.length > 1)) {
+        cartBtn.style.display = 'block';
+        cartBtn.textContent = '▶ Assistir';
+        cartBtn.style.background = '#b4233a';
+        cartBtn.style.color = '#fff';
+        cartBtn.onclick = () => playStream(item.title, item.stream_url);
+      } else {
+        cartBtn.style.display = 'none';
+      }
+      modal.classList.add('open');
+    }
+
+    async function loadVod(type, page, append) {
+      if (!append) grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Carregando catálogo...</p>';
+      const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=${type}&page=${page}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      const data = json.data || [];
+      vodItems = append ? vodItems.concat(data) : data;
+      vodPage = page;
+      const pages = json.pagination?.total_pages || 1;
+      vodHasMore = page < pages;
+      renderVodGrid();
+      const first = vodItems.find(i => i.backdrop || i.poster);
+      if (!append && first && document.getElementById('hero')) {
+        document.getElementById('hero').style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.6)), url('${first.backdrop || first.poster}')`;
+        document.getElementById('heroTitle').textContent = first.title;
+        document.getElementById('heroPlay').onclick = () => openVod(first);
+      }
+    }
+
+    document.querySelectorAll('#vodSources .filter-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('#vodSources .filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        vodSource = btn.dataset.src;
+        const genreBar = document.getElementById('filters');
+        if (vodSource === 'loja') {
+          if (genreBar) genreBar.style.display = '';
+          document.getElementById('vodMoreWrap').style.display = 'none';
+          renderDoramas(currentFilter);
+        } else {
+          if (genreBar) genreBar.style.display = 'none';
+          loadVod(vodSource, 1, false).catch(err => {
+            grid.innerHTML = '<p style="color:#f66;padding:1rem;">Não foi possível carregar o VOD.</p>';
+            console.error(err);
+          });
+        }
+      };
+    });
+    document.getElementById('vodMore').onclick = () => {
+      if (vodSource === 'loja' || !vodHasMore) return;
+      loadVod(vodSource, vodPage + 1, true);
+    };
+
     let searchQuery = '';
     const searchInput = document.getElementById('catalogSearch');
     if (searchInput) {
       searchInput.oninput = (e) => {
         searchQuery = e.target.value.trim().toLowerCase();
-        renderDoramas(currentFilter);
+        if (vodSource === 'loja') renderDoramas(currentFilter);
+        else renderVodGrid();
       };
     }
     const _renderDoramas = renderDoramas;
