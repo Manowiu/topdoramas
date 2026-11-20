@@ -2091,6 +2091,16 @@
       const vipPromo = document.getElementById('shortDramaVipPromo');
       if (promo) promo.style.display = source === 'loja' ? '' : 'none';
       if (vipPromo) vipPromo.style.display = source === 'loja' ? '' : 'none';
+      if (globalSearchActive && searchQuery) {
+        if (genreBar) genreBar.style.display = 'none';
+        const controls = document.getElementById('catalogControls');
+        if (controls) controls.style.display = 'none';
+        performGlobalSearch(searchQuery);
+        document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      const controls = document.getElementById('catalogControls');
+      if (controls) controls.style.display = '';
       if (source === 'loja') {
         if (genreBar) genreBar.style.display = '';
         document.getElementById('vodMoreWrap').style.display = 'none';
@@ -2212,6 +2222,10 @@
       const requestVersion = ++globalSearchVersion;
       globalSearchActive = query.length > 0;
       if (!query) {
+        const controls = document.getElementById('catalogControls');
+        if (controls) controls.style.display = vodSource === 'loja' ? '' : 'none';
+        const requestBtn = document.getElementById('requestBtn');
+        if (requestBtn) requestBtn.style.display = vodSource === 'loja' ? '' : 'none';
         const catalogHeading = document.getElementById('catalogHeading');
         const titles = { loja: 'Novelinhas Nacionais e Internacionais', doramas: 'Doramas em Destaque', movies: 'Filmes em Destaque', series: 'Séries Imperdíveis', animes: 'Animes em Alta' };
         if (catalogHeading) catalogHeading.textContent = titles[vodSource] || 'Destaques da Semana';
@@ -2219,6 +2233,12 @@
         else renderVodGrid();
         return;
       }
+      if (query.length < 2) {
+        grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Digite pelo menos 2 caracteres para buscar em todos os catálogos.</p>';
+        return;
+      }
+      const controls = document.getElementById('catalogControls');
+      if (controls) controls.style.display = 'none';
       grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Buscando em todos os catálogos...</p>';
       document.getElementById('vodMoreWrap').style.display = 'none';
       try {
