@@ -1949,75 +1949,22 @@
 
     let vodAll = [];
     let nixSeries = null;
-    let nixSeriesCategories = null;
-
-    const SERIES_TITLE_OVERRIDES = [
-      [/^casamento impossivel/, 'doramas'],
-      [/^vivy\b/, 'animes'],
-      [/^viral hit\b/, 'animes'],
-      [/^beyblade\b/, 'animes'],
-      [/^do[,\s]+re\s*&\s*mi/, 'animes']
-    ];
     function seriesBucket(item) {
-      const title = typeof item === 'string' ? item : (item.name || item.title || '');
-      const normalizedTitle = String(title).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-      const titleOverride = SERIES_TITLE_OVERRIDES.find(([pattern]) => pattern.test(normalizedTitle));
-      if (titleOverride) return titleOverride[1];
-
-      const text = typeof item === 'string'
-        ? item.toLowerCase()
-        : [
-            item.category_name, item.categoryName, item.category, item.category_title,
-            item.genre, item.genres, item.country, item.country_name, item.language,
-            item.original_language, item.language_code, item.type, item.stream_type,
-            item.name, item.title
-          ].filter(Boolean).join(' ').toLowerCase();
-      const category = typeof item === 'string'
-        ? item.toLowerCase()
-        : [item.category_name, item.categoryName, item.category, item.category_title].filter(Boolean).join(' ').toLowerCase();
-      const mediaDetails = typeof item === 'string'
-        ? text
-        : [item.genre, item.genres, item.country, item.country_name, item.language, item.original_language, item.language_code, item.type, item.stream_type].filter(Boolean).join(' ').toLowerCase();
-
-      if (/anime|donghua|animat|animaç|cartoon/.test(text)) return 'animes';
-      if (/mini.?s.rie|miniseries|mini.?drama|micro.?drama|short.?drama/.test(text)) return 'novelinhas';
-
-      const asianDrama = /dorama|k.?drama|c.?drama|j.?drama|korean|\bkorea\b|chinese|\bchina\b|japanese|\bjapan\b|taiwan|thai|thailand|vietnamese|vietnam|filipino|philippines|hong.?kong|asian|asiatic/.test(text);
-      const asianLanguageCode = /(^|[^a-z])(ko|kor|zh|zho|chi|ja|jpn|th|tha|vi|vie|yue)([^a-z]|$)/.test(mediaDetails);
-      const hangulTitle = /[\uac00-\ud7af]/.test(String(title));
-      if (asianDrama || asianLanguageCode || hangulTitle) return 'doramas';
-
-      // Só classifica como novela ocidental depois de verificar os sinais de dorama.
-      if (/soap|telenovela|novela|novelinha/.test(category + ' ' + mediaDetails)) return 'series';
+      const g = (typeof item === 'string' ? item : (item.genre || '')).toLowerCase();
+      const n = (typeof item === 'string' ? '' : (item.name || item.title || '')).toLowerCase();
+      if (/anima|anime|donghua|animation/.test(g)) return 'animes';
+      if (/mini.?s.rie|miniseries|mini.?drama|micro.?drama/.test(g + ' ' + n)) return 'novelinhas';
+      if (g.includes('soap') || /novela|novelinha/.test(g) || /novela|novelinha/.test(n)) return 'series';
+      if (g.includes('drama')) return 'doramas';
       return 'series';
     }
 
-    let nixSeriesLoadPromise = null;
     async function ensureNixSeriesCatalog() {
-      if (!nixSeriesLoadPromise) {
-        nixSeriesLoadPromise = (async () => {
-          const seriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
-          const rawSeries = await (await fetch(seriesUrl)).json();
-          let categoriesPayload = [];
-          const categoriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_categories`;
-          try { categoriesPayload = await (await fetch(categoriesUrl)).json(); } catch (e) {}
-          const categoryList = Array.isArray(categoriesPayload) ? categoriesPayload : (categoriesPayload?.categories || categoriesPayload?.data || []);
-          const categories = new Map(categoryList.map(category => [
-            String(category.category_id ?? category.id ?? ''),
-            category.category_name || category.name || ''
-          ]));
-          nixSeries = (Array.isArray(rawSeries) ? rawSeries : []).map(item => ({
-            ...item,
-            category_name: item.category_name || item.categoryName || categories.get(String(item.category_id ?? '')) || ''
-          }));
-          nixSeriesCategories = categoriesPayload;
-          return nixSeries;
-        })().catch(error => {
-          nixSeriesLoadPromise = null;
-          throw error;
-        });
+      if (!nixSeries) {
+        const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
+        nixSeries = await (await fetch(url)).json();
       }
-      return await nixSeriesLoadPromise;
+      return Array.isArray(nixSeries) ? nixSeries : [];
     }
 
     async function loadVod(type, page, append) {
