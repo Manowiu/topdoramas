@@ -837,7 +837,7 @@
     <div class="modal-content" style="max-width:460px;">
       <button class="close" id="closeVip">&times;</button>
       <h2 style="margin-bottom:.4rem;">Assinatura VIP</h2>
-      <p style="color:#aaa;margin-bottom:1rem;">Escolha seu plano para assistir a todo o catálogo. As compras avulsas continuam valendo.</p>
+      <p style="color:#aaa;margin-bottom:1rem;">Os planos mensal, semestral e vitalício liberam filmes e séries. O plano semanal não inclui esses catálogos; compras avulsas continuam valendo.</p>
       <div class="vip-plans" id="vipPlans">
         <button class="vip-plan-option" type="button" data-vip-plan="semanal">Semanal<strong>R$ 9,90</strong><small>7 dias de acesso</small></button>
         <button class="vip-plan-option active" type="button" data-vip-plan="mensal">Mensal<strong>R$ 19,90</strong><small>30 dias de acesso</small></button>
@@ -1383,11 +1383,11 @@
       return VIP_PLANS.mensal;
     }
 
-    function hasActiveVip(purchases) {
+    function hasActiveVip(purchases, includeWeekly = true) {
       const now = Date.now();
       return (purchases || []).some(purchase => {
         const plan = getVipPlanFromPurchaseTitle(purchase.dorama_title);
-        if (!plan) return false;
+        if (!plan || (!includeWeekly && plan === VIP_PLANS.semanal)) return false;
         if (plan.days === null) return true;
         const startedAt = Date.parse(purchase.created_at || '');
         return Number.isFinite(startedAt) && startedAt + plan.days * 24 * 60 * 60 * 1000 > now;
@@ -1467,7 +1467,7 @@
         .eq('email', session.user.email)
         .eq('status', 'paid')
         .like('dorama_title', 'Assinatura VIP%');
-      window.isVip = hasActiveVip(data || []);
+      window.isVip = hasActiveVip(data || [], false);
       if (window.isVip) return true;
       document.getElementById('vipModal').classList.add('open');
       return false;
