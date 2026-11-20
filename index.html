@@ -100,6 +100,11 @@
       border-radius: 14px; padding: .85rem 1rem; font-size: .95rem;
     }
     .filters { padding: .8rem 1rem; gap: .5rem; }
+    .catalog-controls { display:flex;gap:.65rem;padding:.25rem 1rem .75rem; }
+    .catalog-controls label { flex:1;min-width:0;color:#999;font-size:.7rem; }
+    .catalog-controls select { display:block;width:100%;margin-top:.25rem;background:#141414;color:#fff;border:1px solid #333;border-radius:10px;padding:.6rem .7rem;font:inherit;font-size:.8rem; }
+    .catalog-controls select:focus { outline:none;border-color:var(--yellow); }
+    @media (min-width:700px) { .catalog-controls { max-width:420px;margin-left:auto; } }
     .filter-btn {
       border-radius: 999px !important; background: #111 !important;
       border: 1px solid #333 !important; color: #ddd !important;
@@ -805,6 +810,20 @@
   </section>
 
   <div class="filters" id="filters"></div>
+  <div class="catalog-controls" id="catalogControls">
+    <label>Gênero
+      <select id="catalogGenreFilter"><option value="all">Todos</option></select>
+    </label>
+    <label>Organizar
+      <select id="catalogSort">
+        <option value="default">Padrão</option>
+        <option value="title-asc">Nome: A a Z</option>
+        <option value="title-desc">Nome: Z a A</option>
+        <option value="year-desc">Mais recentes</option>
+        <option value="year-asc">Mais antigos</option>
+      </select>
+    </label>
+  </div>
 
   <div class="container" id="catalogo">
     <section id="shortDramaPromo" aria-label="Preços dos mini-dramas avulsos" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.25rem;margin-bottom:1rem;color:#fff;">
@@ -1263,11 +1282,60 @@
     }
 
     let currentFilter = 'todos';
+    let catalogGenre = 'all';
+    let catalogSort = 'default';
+
+    function genreNames(value) {
+      const values = Array.isArray(value) ? value : String(value || '').split(/[,|/]/);
+      return values.map(item => typeof item === 'object' ? (item.name || item.title || '') : String(item))
+        .map(name => name.trim()).filter(Boolean);
+    }
+
+    function updateCatalogGenreOptions(items) {
+      const select = document.getElementById('catalogGenreFilter');
+      if (!select) return;
+      const genres = [...new Set(items.flatMap(item => genreNames(item.genres)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const validSelection = catalogGenre === 'all' || genres.includes(catalogGenre);
+      if (!validSelection) catalogGenre = 'all';
+      select.innerHTML = '<option value="all">Todos</option>' + genres.map(genre =>
+        '<option value="' + genre.replace(/"/g, '&quot;') + '">' + genre + '</option>'
+      ).join('');
+      select.value = catalogGenre;
+    }
+
+    function applyCatalogControls(items, query = '') {
+      let result = items.filter(item => {
+        const title = String(item.title || '').toLowerCase();
+        const matchesQuery = !query || title.includes(query);
+        const matchesGenre = catalogGenre === 'all' || genreNames(item.genres).includes(catalogGenre);
+        return matchesQuery && matchesGenre;
+      });
+      const year = item => parseInt(String(item.year || '').slice(0, 4), 10) || 0;
+      if (catalogSort === 'title-asc') result.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR'));
+      if (catalogSort === 'title-desc') result.sort((a, b) => String(b.title || '').localeCompare(String(a.title || ''), 'pt-BR'));
+      if (catalogSort === 'year-desc') result.sort((a, b) => year(b) - year(a));
+      if (catalogSort === 'year-asc') result.sort((a, b) => year(a) - year(b));
+      return result;
+    }
+
+    document.getElementById('catalogGenreFilter').onchange = event => {
+      catalogGenre = event.target.value;
+      if (vodSource === 'loja') showNovelinhas();
+      else renderVodGrid();
+    };
+    document.getElementById('catalogSort').onchange = event => {
+      catalogSort = event.target.value;
+      if (vodSource === 'loja') showNovelinhas();
+      else renderVodGrid();
+    };
 
     function renderDoramas(filter = currentFilter) {
       currentFilter = filter;
       grid.innerHTML = '';
-      const filtered = filter === 'todos' ? doramas : doramas.filter(m => m.genres.includes(filter));
+      updateCatalogGenreOptions(doramas);
+      const genreFiltered = filter === 'todos' ? doramas : doramas.filter(m => m.genres.includes(filter));
+      const q = (document.getElementById('catalogSearch')?.value || '').trim().toLowerCase();
+      const filtered = applyCatalogControls(genreFiltered, q);
       filtered.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
@@ -1556,7 +1624,8 @@
       grid.innerHTML = '';
       const q = (document.getElementById('catalogSearch')?.value || '').trim().toLowerCase();
       const base = vodSource === 'movies' ? vodItems : (vodAll.length ? vodAll : vodItems);
-      const filtered = q ? base.filter(i => (i.title || '').toLowerCase().includes(q)) : base;
+      updateCatalogGenreOptions(base);
+      const filtered = applyCatalogControls(base, q);
       const list = vodSource === 'movies' ? filtered : filtered.slice(0, Math.max(vodPage, 1) * 24);
       if (vodSource !== 'movies') vodHasMore = list.length < filtered.length;
       if (!list.length) {
