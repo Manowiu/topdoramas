@@ -1550,7 +1550,7 @@
       const g = (typeof item === 'string' ? item : (item.genre || '')).toLowerCase();
       const n = (typeof item === 'string' ? '' : (item.name || item.title || '')).toLowerCase();
       if (/anima|anime|donghua|animation/.test(g)) return 'animes';
-      if (/mini.?s.rie|miniseries|mini.?drama|short.?drama|micro.?drama/.test(g + ' ' + n)) return 'novelinhas';
+      if (/mini.?s.rie|miniseries|mini.?drama|short.?drama|micro.?drama|dramas?\s+curtos?/.test(g + ' ' + n)) return 'novelinhas';
       if (g.includes('soap') || /novela|novelinha/.test(g) || /novela|novelinha/.test(n)) return 'series';
       if (g.includes('drama')) return 'doramas';
       return 'series';
