@@ -1318,6 +1318,53 @@
       return result;
     }
 
+    function vodTitleBase(title) {
+      return String(title || '')
+        .replace(/\\s*[\\[(]\\s*(?:L|LEG|LEGENDADO|D|DUB|DUBLADO|DUAL[ -]?AUDIO|ORIGINAL|PT[- ]?BR)\\s*[\\])]/ig, '')
+        .replace(/\\s*[-|:]\\s*(?:LEGENDADO|DUBLADO|DUAL[ -]?AUDIO|ORIGINAL|PT[- ]?BR)\\s*$/ig, '')
+        .replace(/\\s+(?:LEGENDADO|DUBLADO)\\s*$/ig, '')
+        .replace(/\\s+/g, ' ').trim();
+    }
+
+    function vodSourceLabel(item) {
+      const source = [item.title, item.name, item.audio, item.language, item.subtitle, item.audio_codec, item.stream_type]
+        .filter(Boolean).join(' ');
+      if (/\\[L\\]|\\(L\\)|\\blegendad[oa]\\b|\\bleg\\b/i.test(source)) return 'Legendado';
+      if (/\\[D\\]|\\(D\\)|\\bdublad[oa]\\b|\\bdub\\b/i.test(source)) return 'Dublado';
+      if (/dual[ -]?audio|dual[ -]?áudio/i.test(source)) return 'Dual áudio';
+      if (/\\boriginal\\b/i.test(source)) return 'Áudio original';
+      if (/pt[- ]?br|portugu[eê]s/i.test(source)) return 'Português';
+      return '';
+    }
+
+    function groupVodVariants(items) {
+      const groups = new Map();
+      items.forEach(item => {
+        const baseTitle = vodTitleBase(item.title || item.name);
+        const key = baseTitle.toLocaleLowerCase('pt-BR');
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ ...item, _baseTitle: baseTitle, _sourceLabel: vodSourceLabel(item) });
+      });
+      const grouped = [];
+      groups.forEach(variants => {
+        const sourceLabels = [...new Set(variants.map(item => item._sourceLabel).filter(Boolean))];
+        if (variants.length > 1 && sourceLabels.length > 1) {
+          grouped.push({
+            ...variants[0],
+            title: variants[0]._baseTitle,
+            variants: variants.map(item => ({ ...item, displayTitle: variants[0]._baseTitle })),
+            sources: sourceLabels.join(', ')
+          });
+        } else {
+          variants.forEach(item => {
+            const { _baseTitle, _sourceLabel, ...cleanItem } = item;
+            grouped.push(cleanItem);
+          });
+        }
+      });
+      return grouped;
+    }
+
     document.getElementById('catalogGenreFilter').onchange = event => {
       catalogGenre = event.target.value;
       if (vodSource === 'loja') showNovelinhas();
@@ -1623,7 +1670,8 @@
     function renderVodGrid() {
       grid.innerHTML = '';
       const q = (document.getElementById('catalogSearch')?.value || '').trim().toLowerCase();
-      const base = vodSource === 'movies' ? vodItems : (vodAll.length ? vodAll : vodItems);
+      const sourceItems = vodSource === 'movies' ? vodItems : (vodAll.length ? vodAll : vodItems);
+      const base = groupVodVariants(sourceItems);
       updateCatalogGenreOptions(base);
       const filtered = applyCatalogControls(base, q);
       const list = vodSource === 'movies' ? filtered : filtered.slice(0, Math.max(vodPage, 1) * 24);
@@ -1652,8 +1700,39 @@
     }
 
     function openVod(item) {
+      if (item.variants && item.variants.length > 1) {
+        document.getElementById('modalPoster').src = item.poster || '';
+        document.getElementById('modalTitle').textContent = item.displayTitle || item.title || '';
+        document.getElementById('modalYear').textContent = item.year || '';
+        document.getElementById('modalRating').textContent = '';
+        document.getElementById('modalDirector').textContent = 'Escolha a fonte';
+        document.getElementById('modalDuration').textContent = '';
+        document.getElementById('modalOverview').textContent = item.synopsis || 'Selecione a versão que deseja assistir.';
+        document.getElementById('modalGenres').innerHTML = `<span class="tag">${item.genres || 'VOD'}</span>`;
+        let choices = document.getElementById('modalEpisodes');
+        if (!choices) {
+          choices = document.createElement('div');
+          choices.id = 'modalEpisodes';
+          document.querySelector('#modal .modal-content > div').appendChild(choices);
+        }
+        choices.style.display = 'block';
+        choices.innerHTML = '<h4 style="margin:.7rem 0;color:#FFD700;">Escolha a fonte</h4>' + item.variants.map((variant, index) =>
+          '<button type="button" class="vod-source-choice" data-source-index="' + index + '" style="display:block;width:100%;margin:.45rem 0;padding:.75rem;border:1px solid #444;border-radius:9px;background:#171717;color:#fff;text-align:left;cursor:pointer;">▶ ' + (variant._sourceLabel || 'Fonte ' + (index + 1)) + '</button>'
+        ).join('');
+        choices.querySelectorAll('.vod-source-choice').forEach(button => {
+          button.onclick = () => {
+            const variant = item.variants[Number(button.dataset.sourceIndex)];
+            document.getElementById('modal').classList.remove('open');
+            openVod(variant);
+          };
+        });
+        const purchaseButton = document.getElementById('modalCartBtn');
+        if (purchaseButton) purchaseButton.style.display = 'none';
+        modal.classList.add('open');
+        return;
+      }
       if (item.series_id && !item.episodes) {
-        document.getElementById('modalTitle').textContent = item.title || 'Carregando...';
+        document.getElementById('modalTitle').textContent = item.displayTitle || item.title || 'Carregando...';
         document.getElementById('modalOverview').textContent = 'Carregando episódios...';
         modal.classList.add('open');
         const infoUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_info&series_id=${item.series_id}`;
