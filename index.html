@@ -1705,6 +1705,7 @@
     const NIX_USER = 'manowiu-vods';
     const NIX_PASS = 'Koala56252';
     let vodSource = 'loja';
+    let vodRequestVersion = 0;
     let vodPage = 1;
     let vodItems = [];
     let vodHasMore = false;
@@ -1947,10 +1948,12 @@
     }
 
     async function loadVod(type, page, append) {
+      const requestVersion = ++vodRequestVersion;
       if (!append) grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Carregando catálogo...</p>';
       if (type === 'movies') {
         const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
         const json = await (await fetch(url)).json();
+        if (requestVersion !== vodRequestVersion || vodSource !== type) return;
         const data = json.data || [];
         vodItems = append ? vodItems.concat(data) : data;
         vodAll = [];
@@ -1962,6 +1965,7 @@
           const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
           nixSeries = await (await fetch(url)).json();
         }
+        if (requestVersion !== vodRequestVersion || vodSource !== type) return;
         vodAll = nixSeries.filter(s => seriesBucket(s) === type).map(s => ({
           title: s.name,
           poster: s.cover,
@@ -1997,6 +2001,7 @@
     function selectVodSource(source, updateAddress = true) {
       const allowedSources = ['loja', 'doramas', 'movies', 'series', 'animes'];
       if (!allowedSources.includes(source)) source = 'loja';
+      vodRequestVersion++;
       vodSource = source;
       try { sessionStorage.setItem('topdoramas_catalog', source); } catch (e) {}
       const catalogHeading = document.getElementById('catalogHeading');
