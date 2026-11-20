@@ -35,6 +35,10 @@
     .header-actions { display: flex; align-items: center; gap: 1rem; }
     .header-icon-btn { background:none;border:0;color:#fff;padding:.2rem;display:grid;place-items:center;cursor:pointer; }
     .header-icon-btn svg { width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round; }
+    .header-search { position:absolute;top:100%;left:0;right:0;padding:.7rem 1rem;background:rgba(0,0,0,.94);border-bottom:1px solid #262626; }
+    .header-search[hidden] { display:none; }
+    .header-search input { width:100%;background:#141414;border:1px solid #333;color:#fff;border-radius:12px;padding:.75rem .9rem;font-size:.95rem;outline:none; }
+    .header-search input:focus { border-color:var(--yellow); }
     .vip-btn {
       background: linear-gradient(180deg,#f6d36b,#c8962e);
       color: #2a1b00; border: none; border-radius: 999px;
@@ -768,6 +772,9 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.5" r="3.5"></circle><path d="M4.5 20c.5-4 3.2-6 7.5-6s7 2 7.5 6z"></path></svg>
       </button>
     </div>
+    <div class="header-search" id="headerSearchBar" hidden>
+      <input id="catalogSearch" type="search" placeholder="Buscar títulos..." aria-label="Buscar títulos">
+    </div>
   </header>
   <div class="side-menu" id="sideMenu">
     <button class="menu-btn" id="closeMenu" style="font-size:1.6rem;">×</button>
@@ -793,10 +800,6 @@
       <button class="play-now" id="heroPlay">▶ Assistir Agora</button>
     </div>
   </section>
-
-  <div class="search-wrap">
-    <input id="catalogSearch" type="search" placeholder="Buscar filmes...">
-  </div>
 
   <div class="filters" id="filters"></div>
 
@@ -1375,7 +1378,14 @@
     });
 
     document.getElementById('menuBtn').onclick = () => document.getElementById('sideMenu').classList.add('open');
-    document.getElementById('headerSearch').onclick = () => document.getElementById('catalogSearch').focus();
+    document.getElementById('headerSearch').onclick = () => {
+      const searchBar = document.getElementById('headerSearchBar');
+      const searchButton = document.getElementById('headerSearch');
+      const opening = searchBar.hidden;
+      searchBar.hidden = !opening;
+      searchButton.setAttribute('aria-expanded', String(opening));
+      if (opening) document.getElementById('catalogSearch').focus();
+    };
     document.getElementById('headerProfile').onclick = () => document.getElementById('openAuth').click();
     document.getElementById('closeMenu').onclick = () => document.getElementById('sideMenu').classList.remove('open');
     const VIP_PLANS = {
