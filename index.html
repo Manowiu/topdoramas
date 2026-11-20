@@ -842,24 +842,25 @@
         <button type="button" onclick="document.getElementById('vipModal').classList.add('open')" style="background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;border-radius:10px;padding:.7rem 1rem;font-weight:800;cursor:pointer;">Ver planos VIP</button>
       </div>
     </section>
+        <div class="catalog-controls" id="catalogControls">
+        <label>Gênero
+          <select id="catalogGenreFilter"><option value="all">Todos</option></select>
+        </label>
+        <label>Organizar
+          <select id="catalogSort">
+            <option value="default">Padrão</option>
+            <option value="title-asc">Nome: A a Z</option>
+            <option value="title-desc">Nome: Z a A</option>
+            <option value="year-desc">Mais recentes</option>
+            <option value="year-asc">Mais antigos</option>
+          </select>
+        </label>
+      </div>
     <div class="grid" id="grid"></div>
     <div id="vodMoreWrap" style="text-align:center;padding:1rem 0;display:none;">
       <button id="vodMore" class="filter-btn" type="button">Carregar mais</button>
     </div>
-  <div class="catalog-controls" id="catalogControls">
-    <label>Gênero
-      <select id="catalogGenreFilter"><option value="all">Todos</option></select>
-    </label>
-    <label>Organizar
-      <select id="catalogSort">
-        <option value="default">Padrão</option>
-        <option value="title-asc">Nome: A a Z</option>
-        <option value="title-desc">Nome: Z a A</option>
-        <option value="year-desc">Mais recentes</option>
-        <option value="year-asc">Mais antigos</option>
-      </select>
-    </label>
-  </div>
+  
     <button class="request-btn" id="requestBtn">💬 Não achou o título? Peça aqui</button>
   </div>
 
