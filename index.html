@@ -1951,7 +1951,19 @@
     let nixSeries = null;
     let nixSeriesCategories = null;
 
+    const SERIES_TITLE_OVERRIDES = [
+      [/^casamento impossivel/, 'doramas'],
+      [/^vivy\b/, 'animes'],
+      [/^viral hit\b/, 'animes'],
+      [/^beyblade\b/, 'animes'],
+      [/^do re mi\b/, 'animes']
+    ];
     function seriesBucket(item) {
+      const title = typeof item === 'string' ? item : (item.name || item.title || '');
+      const normalizedTitle = String(title).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const titleOverride = SERIES_TITLE_OVERRIDES.find(([pattern]) => pattern.test(normalizedTitle));
+      if (titleOverride) return titleOverride[1];
+
       const text = typeof item === 'string'
         ? item.toLowerCase()
         : [
@@ -1967,14 +1979,14 @@
         ? text
         : [item.genre, item.genres, item.country, item.country_name, item.language, item.original_language, item.language_code, item.type, item.stream_type].filter(Boolean).join(' ').toLowerCase();
 
-      // Classificação por sinais específicos primeiro; "drama" sozinho não define um dorama.
       if (/anime|donghua|animat|animaç|cartoon/.test(text)) return 'animes';
       if (/mini.?s.rie|miniseries|mini.?drama|micro.?drama|short.?drama/.test(text)) return 'novelinhas';
       if (/soap|telenovela|novela|novelinha/.test(category + ' ' + mediaDetails)) return 'series';
 
       const asianDrama = /dorama|k.?drama|c.?drama|j.?drama|korean|korea|chinese|china|japanese|japan|taiwan|taiwanese|thai|thailand|vietnamese|vietnam|filipino|philippines|hong.?kong|asian|asiatic/.test(text);
       const asianLanguageCode = /(^|[^a-z])(ko|kor|zh|zho|chi|ja|jpn|th|tha|vi|vie|yue)([^a-z]|$)/.test(mediaDetails);
-      if (asianDrama || asianLanguageCode) return 'doramas';
+      const hangulTitle = /[\uac00-\ud7af]/.test(String(title));
+      if (asianDrama || asianLanguageCode || hangulTitle) return 'doramas';
       return 'series';
     }
 
