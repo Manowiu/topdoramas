@@ -762,8 +762,8 @@
     .catalog-tabs { width:100%; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; overflow:visible; padding:14px max(22px,calc((100vw - 1180px)/2)); border-bottom:1px solid #ffffff12; background:#0a0b0f; }
     .catalog-tab-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-width:0; min-height:70px; padding:8px 4px; border:1px solid transparent; border-radius:13px; background:transparent; color:#a6a5ab; text-align:center; font-size:.78rem; text-decoration:none; }
     .catalog-tab-btn.active { background:#191a20; border-color:#36363e; color:#fff; }
-    .catalog-tab-icon { display:grid; place-items:center; color:#d8b96f; height:20px; }
-    .catalog-tab-icon svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; }
+    .catalog-tab-icon { display:grid; place-items:center; color:#d8b96f; height:22px; transition:color .18s ease,transform .18s ease; }
+    .catalog-tab-icon svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }\n    .catalog-tab-btn:hover .catalog-tab-icon, .catalog-tab-btn.active .catalog-tab-icon { color:#f0cc75; transform:translateY(-1px); }
     #catalogo { max-width:1180px; margin:0 auto; padding:20px 22px 72px; }
     #shortDramaPromo, #shortDramaVipPromo { background:#111319 !important; border-color:#30313a !important; border-radius:16px !important; }
     .catalog-section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:12px 0 12px; }
@@ -865,11 +865,11 @@
     </div>
   </header>
     <nav class="catalog-tabs" id="catalogTabs" aria-label="Guias do catálogo">
-      <a class="catalog-tab-btn active" data-src="loja" href="?catalog=loja"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.2-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.7A4.7 4.7 0 0 1 12 6.2a4.7 4.7 0 0 1 8.8 2.5Z"/></svg></span><span>Novelinhas</span></a>
-      <a class="catalog-tab-btn" data-src="doramas" href="?catalog=doramas"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M6 6h12M7 18h10"/></svg></span><span>Doramas</span></a>
-      <a class="catalog-tab-btn" data-src="movies" href="?catalog=movies"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v4m5-4v4m5-4v4M7 16v4m5-4v4m5-4v4"/></svg></span><span>Filmes</span></a>
-      <a class="catalog-tab-btn" data-src="series" href="?catalog=series"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22l4-4 4 4M8 9h.01M12 9h.01M16 9h.01"/></svg></span><span>Séries</span></a>
-      <a class="catalog-tab-btn" data-src="animes" href="?catalog=animes"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3ZM19 16l.9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9L19 16Z"/></svg></span><span>Animes</span></a>
+      <a class="catalog-tab-btn active" data-src="loja" href="?catalog=loja"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.8c0 5-8.8 10-8.8 10s-8.8-5-8.8-10A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z"/><path d="M8.8 10.5h.01M15.2 10.5h.01"/></svg></span><span>Novelinhas</span></a>
+      <a class="catalog-tab-btn" data-src="doramas" href="?catalog=doramas"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8.5 5.4 5h13.2L20 8.5v2.2a2.3 2.3 0 0 1-4.1 1.4 2.3 2.3 0 0 1-3.9 0 2.3 2.3 0 0 1-3.9 0A2.3 2.3 0 0 1 4 10.7V8.5Z"/><path d="M5.5 12v7h13v-7M9 19v-4h6v4"/></svg></span><span>Doramas</span></a>
+      <a class="catalog-tab-btn" data-src="movies" href="?catalog=movies"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM4 7l2-4h16l-2 4"/><path d="m8 3 2 4m3-4 2 4m3-4 2 4M8 12h8"/></svg></span><span>Filmes</span></a>
+      <a class="catalog-tab-btn" data-src="series" href="?catalog=series"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2.5"/><path d="m10 8 5 3-5 3V8ZM8 22h8m-4-4v4"/></svg></span><span>Séries</span></a>
+      <a class="catalog-tab-btn" data-src="animes" href="?catalog=animes"><span class="catalog-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 2 2.3 6.7L21 11l-6.7 2.3L12 20l-2.3-6.7L3 11l6.7-2.3L12 2Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg></span><span>Animes</span></a>
     </nav>
   <div class="side-menu" id="sideMenu">
     <button class="menu-btn" id="closeMenu" style="font-size:1.6rem;">×</button>
