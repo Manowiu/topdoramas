@@ -1987,6 +1987,8 @@
       const catalogHeading = document.getElementById('catalogHeading');
       const catalogTitles = { loja: 'Novelinhas Nacionais e Internacionais', doramas: 'Doramas em Destaque', movies: 'Filmes em Destaque', series: 'Séries Imperdíveis', animes: 'Animes em Alta' };
       if (catalogHeading) catalogHeading.textContent = catalogTitles[source] || 'Destaques da Semana';
+      const requestBtn = document.getElementById('requestBtn');
+      if (requestBtn) requestBtn.style.display = source === 'loja' ? '' : 'none';
       if (updateAddress) {
         const url = new URL(window.location.href);
         url.searchParams.set('catalog', source);
