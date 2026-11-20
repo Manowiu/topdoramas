@@ -57,6 +57,14 @@
       background: #151515; color: #fff; text-align: left; font: inherit; cursor: pointer;
     }
     .menu-category-btn.active { background: #fff; border-color: #fff; color: #000; font-weight: 700; }
+    .vip-plans { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; margin-bottom: 1rem; }
+    .vip-plan-option {
+      background: #161616; border: 1px solid #333; border-radius: 10px; padding: .7rem;
+      color: #fff; text-align: left; font: inherit; font-size: .86rem; cursor: pointer;
+    }
+    .vip-plan-option.active { border-color: #FFD700; box-shadow: 0 0 0 1px #FFD700; }
+    .vip-plan-option strong { display: block; margin: .2rem 0; font-size: 1.1rem; }
+    .vip-plan-option small { display: block; color: #aaa; font-size: .72rem; }
     .hero {
       position: relative; height: 42vh; min-height: 280px;
       background: #111 center/cover no-repeat; margin: 0;
@@ -798,16 +806,17 @@
   </nav>
 
   <div class="modal" id="vipModal" style="align-items:center;">
-    <div class="modal-content" style="max-width:420px;">
+    <div class="modal-content" style="max-width:460px;">
       <button class="close" id="closeVip">&times;</button>
       <h2 style="margin-bottom:.4rem;">Assinatura VIP</h2>
-      <p style="color:#aaa;margin-bottom:1rem;">Assista todos os títulos por 30 dias. As compras avulsas continuam valendo.</p>
-      <div style="background:#161616;border:1px solid #333;border-radius:12px;padding:1rem;margin-bottom:1rem;">
-        <div style="font-size:.8rem;color:#FFD700;">PLANO MENSAL</div>
-        <div style="font-size:2rem;font-weight:800;">R$ 19,90</div>
-        <div style="color:#aaa;font-size:.85rem;">acesso a todo o catálogo</div>
+      <p style="color:#aaa;margin-bottom:1rem;">Escolha seu plano para assistir a todo o catálogo. As compras avulsas continuam valendo.</p>
+      <div class="vip-plans" id="vipPlans">
+        <button class="vip-plan-option" type="button" data-vip-plan="semanal">Semanal<strong>R$ 9,90</strong><small>7 dias de acesso</small></button>
+        <button class="vip-plan-option active" type="button" data-vip-plan="mensal">Mensal<strong>R$ 19,90</strong><small>30 dias de acesso</small></button>
+        <button class="vip-plan-option" type="button" data-vip-plan="semestral">Semestral<strong>R$ 89,90</strong><small>180 dias de acesso</small></button>
+        <button class="vip-plan-option" type="button" data-vip-plan="vitalicio">Vitalício<strong>R$ 199,90</strong><small>Acesso permanente</small></button>
       </div>
-      <button class="submit-btn" id="subscribeBtn">Assinar com PIX</button>
+      <button class="submit-btn" id="subscribeBtn">Assinar plano mensal com PIX</button>
     </div>
   </div>
 
@@ -1329,28 +1338,77 @@
 
     document.getElementById('menuBtn').onclick = () => document.getElementById('sideMenu').classList.add('open');
     document.getElementById('closeMenu').onclick = () => document.getElementById('sideMenu').classList.remove('open');
-    document.getElementById('openVip').onclick = () => document.getElementById('vipModal').classList.add('open');
-    document.getElementById('closeVip').onclick = () => document.getElementById('vipModal').classList.remove('open');
-    document.getElementById('subscribeBtn').onclick = async () => {
-      let isLogged = false;
-      if (supabaseClient) {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        isLogged = !!session;
-      }
-      if (!isLogged) {
-        document.getElementById('vipModal').classList.remove('open');
-        document.getElementById('authModal').classList.add('open');
-        return;
-      }
-      window.vipCheckout = true;
-      currentPurchaseTitle = 'Assinatura VIP';
+    const VIP_PLANS = {
+      semanal: { label: 'Semanal', days: 7, price: 9.90, displayPrice: 'R$ 9,90', purchaseTitle: 'Assinatura VIP - Semanal' },
+      mensal: { label: 'Mensal', days: 30, price: 19.90, displayPrice: 'R$ 19,90', purchaseTitle: 'Assinatura VIP - Mensal' },
+      semestral: { label: 'Semestral', days: 180, price: 89.90, displayPrice: 'R$ 89,90', purchaseTitle: 'Assinatura VIP - Semestral' },
+      vitalicio: { label: 'Vitalício', days: null, price: 199.90, displayPrice: 'R$ 199,90', purchaseTitle: 'Assinatura VIP - Vitalício' }
+    };
+    let selectedVipPlan = 'mensal';
+
+    function getVipPlanFromPurchaseTitle(title) {
+      const normalized = String(title || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (!normalized.startsWith('assinatura vip')) return null;
+      if (normalized.includes('vitalicio')) return VIP_PLANS.vitalicio;
+      if (normalized.includes('semestral')) return VIP_PLANS.semestral;
+      if (normalized.includes('semanal')) return VIP_PLANS.semanal;
+      return VIP_PLANS.mensal;
+    }
+
+    function hasActiveVip(purchases) {
+      const now = Date.now();
+      return (purchases || []).some(purchase => {
+        const plan = getVipPlanFromPurchaseTitle(purchase.dorama_title);
+        if (!plan) return false;
+        if (plan.days === null) return true;
+        const startedAt = Date.parse(purchase.created_at || '');
+        return Number.isFinite(startedAt) && startedAt + plan.days * 24 * 60 * 60 * 1000 > now;
+      });
+    }
+
+    function openVipCheckout(planId = selectedVipPlan) {
+      const plan = VIP_PLANS[planId];
+      if (!plan) return;
+      window.pendingVipPlan = null;
+      window.vipCheckoutPlan = planId;
+      currentPurchaseTitle = plan.purchaseTitle;
       document.getElementById('vipModal').classList.remove('open');
-      document.getElementById('checkoutTitle').textContent = 'Assinatura VIP — 30 dias';
-      document.getElementById('checkoutPrice').textContent = 'R$ 19,90';
+      document.getElementById('checkoutTitle').textContent = 'Assinatura VIP — ' + plan.label + (plan.days ? ' (' + plan.days + ' dias)' : '');
+      document.getElementById('checkoutPrice').textContent = plan.displayPrice;
       document.getElementById('checkoutModal').classList.add('open');
       document.getElementById('checkoutForm').style.display = 'block';
       document.getElementById('pixResult').style.display = 'none';
       openCheckout();
+    }
+
+    async function openVipCheckoutAfterAuth() {
+      if (!window.pendingVipPlan || !supabaseClient) return;
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) return;
+      openVipCheckout(window.pendingVipPlan);
+    }
+
+    document.querySelectorAll('#vipPlans .vip-plan-option').forEach(button => {
+      button.onclick = () => {
+        selectedVipPlan = button.dataset.vipPlan;
+        document.querySelectorAll('#vipPlans .vip-plan-option').forEach(option => {
+          option.classList.toggle('active', option === button);
+        });
+        document.getElementById('subscribeBtn').textContent = 'Assinar plano ' + VIP_PLANS[selectedVipPlan].label.toLowerCase() + ' com PIX';
+      };
+    });
+
+    document.getElementById('openVip').onclick = () => document.getElementById('vipModal').classList.add('open');
+    document.getElementById('closeVip').onclick = () => document.getElementById('vipModal').classList.remove('open');
+    document.getElementById('subscribeBtn').onclick = async () => {
+      const { data: { session } } = supabaseClient ? await supabaseClient.auth.getSession() : { data: { session: null } };
+      if (!session) {
+        window.pendingVipPlan = selectedVipPlan;
+        document.getElementById('vipModal').classList.remove('open');
+        document.getElementById('authModal').classList.add('open');
+        return;
+      }
+      openVipCheckout(selectedVipPlan);
     };
 
     renderFilters();
@@ -1377,12 +1435,12 @@
       if (isAdmin) { window.isVip = true; return true; }
       const { data } = await supabaseClient
         .from('purchases')
-        .select('id')
+        .select('dorama_title, created_at')
         .eq('email', session.user.email)
-        .eq('dorama_title', 'Assinatura VIP')
         .eq('status', 'paid')
-        .limit(1);
-      if (data && data.length) { window.isVip = true; return true; }
+        .like('dorama_title', 'Assinatura VIP%');
+      window.isVip = hasActiveVip(data || []);
+      if (window.isVip) return true;
       document.getElementById('vipModal').classList.add('open');
       return false;
     }
@@ -2121,6 +2179,7 @@
 
     document.getElementById('closeCheckout').onclick = () => {
       document.getElementById('checkoutModal').classList.remove('open');
+      window.vipCheckoutPlan = null;
     };
 
     async function criarPagamentoS6X(method) {
@@ -2132,7 +2191,7 @@
       }
 
       const body = {
-        amount: window.vipCheckout ? 19.90 : calcPrice(cart.length || 1),
+        amount: window.vipCheckoutPlan ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(cart.length || 1),
         customer: { name, email },
         description: currentPurchaseTitle,
         product: { name: currentPurchaseTitle },
@@ -2192,6 +2251,7 @@
           }
           document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
           document.getElementById('pixStatus').style.color = '#2ecc71';
+          window.vipCheckoutPlan = null;
           cart = [];
           updateCartUI();
           setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
@@ -2600,6 +2660,7 @@
       supabaseClient.auth.onAuthStateChange(() => {
         updateAuthUI();
         openCheckoutAfterAuth();
+        openVipCheckoutAfterAuth();
       });
     }
     updateAuthUI();
@@ -2614,15 +2675,15 @@
       const email = session.user.email;
       const { data } = await supabaseClient
         .from('purchases')
-        .select('dorama_title')
+        .select('dorama_title, created_at')
         .eq('email', email)
         .eq('status', 'paid');
+      window.isVip = hasActiveVip(data || []);
       if (data && data.length) {
         const userId = session.user.id;
         const library = getLibrary(userId);
         let changed = false;
         data.forEach(p => {
-          if (p.dorama_title === 'Assinatura VIP') window.isVip = true;
           if (p.dorama_title && !library.includes(p.dorama_title)) {
             library.push(p.dorama_title);
             changed = true;
