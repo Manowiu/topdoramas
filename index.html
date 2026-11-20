@@ -2700,7 +2700,7 @@
         customer: { name, email },
         description: currentPurchaseTitle,
         product: { name: currentPurchaseTitle },
-        order_reference: currentPurchaseTitle,
+        order_reference: (currentPurchaseTitle || 'pedido') + '-' + Date.now(),
         payment_method: method
       };
       if (method === 'card') {
@@ -2730,38 +2730,53 @@
       }
     }
 
+    let pixInFlight = false;
+    let pixCheckInterval = null;
+
     document.getElementById('gerarPixBtn').onclick = async () => {
-      const data = await criarPagamentoS6X('pix');
-      if (!data || !data.pix) return;
-      document.getElementById('checkoutForm').style.display = 'none';
-      document.getElementById('pixResult').style.display = 'block';
-      if (data.pix.qr_code_base64) {
-        document.getElementById('pixQr').src = 'data:image/png;base64,' + data.pix.qr_code_base64;
-      }
-      document.getElementById('pixCopy').value = data.pix.copy_paste || data.pix.qr_code || '';
-      document.getElementById('pixStatus').textContent = 'Aguardando pagamento... (atualiza automaticamente)';
-      pendingPurchase = checkoutEventParams();
-      // A confirmação chega via webhook + sync da tabela purchases
-      const checkInterval = setInterval(async () => {
-        await syncPurchasesFromSupabase();
-        const userId = await getCurrentUserId();
-        const library = getLibrary(userId);
-        const titles = (currentPurchaseTitle || '').split(', ').filter(Boolean);
-        const paid = titles.length && titles.every(t => library.includes(t) || library.includes(currentPurchaseTitle));
-        if (paid) {
-          clearInterval(checkInterval);
-          if (pendingPurchase) {
-            trackMeta('Purchase', pendingPurchase);
-            pendingPurchase = null;
-          }
-          document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
-          document.getElementById('pixStatus').style.color = '#2ecc71';
-          window.vipCheckoutPlan = null;
-          cart = [];
-          updateCartUI();
-          setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
+      if (pixInFlight) return;
+      const btn = document.getElementById('gerarPixBtn');
+      pixInFlight = true;
+      btn.disabled = true;
+      btn.textContent = 'Gerando PIX...';
+      try {
+        const data = await criarPagamentoS6X('pix');
+        if (!data || !data.pix) return;
+        document.getElementById('checkoutForm').style.display = 'none';
+        document.getElementById('pixResult').style.display = 'block';
+        if (data.pix.qr_code_base64) {
+          document.getElementById('pixQr').src = 'data:image/png;base64,' + data.pix.qr_code_base64;
         }
-      }, 5000);
+        document.getElementById('pixCopy').value = data.pix.copy_paste || data.pix.qr_code || '';
+        document.getElementById('pixStatus').textContent = 'Aguardando pagamento... (atualiza automaticamente)';
+        pendingPurchase = checkoutEventParams();
+        if (pixCheckInterval) clearInterval(pixCheckInterval);
+        pixCheckInterval = setInterval(async () => {
+          await syncPurchasesFromSupabase();
+          const userId = await getCurrentUserId();
+          const library = getLibrary(userId);
+          const titles = (currentPurchaseTitle || '').split(', ').filter(Boolean);
+          const paid = titles.length && titles.every(t => library.includes(t) || library.includes(currentPurchaseTitle));
+          if (paid) {
+            clearInterval(pixCheckInterval);
+            pixCheckInterval = null;
+            if (pendingPurchase) {
+              trackMeta('Purchase', pendingPurchase);
+              pendingPurchase = null;
+            }
+            document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
+            document.getElementById('pixStatus').style.color = '#2ecc71';
+            window.vipCheckoutPlan = null;
+            cart = [];
+            updateCartUI();
+            setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
+          }
+        }, 5000);
+      } finally {
+        pixInFlight = false;
+        btn.disabled = false;
+        btn.textContent = 'Gerar PIX';
+      }
     };
 
     document.getElementById('copyPixBtn').onclick = () => {
