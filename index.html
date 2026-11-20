@@ -1982,7 +1982,7 @@
       if (/anime|donghua|animat|animaç|cartoon/.test(text)) return 'animes';
       if (/mini.?s.rie|miniseries|mini.?drama|micro.?drama|short.?drama/.test(text)) return 'novelinhas';
 
-      const asianDrama = /dorama|k.?drama|c.?drama|j.?drama|korean|korea|chinese|china|japanese|japan|taiwan|taiwanese|thai|thailand|vietnamese|vietnam|filipino|philippines|hong.?kong|asian|asiatic/.test(text);
+      const asianDrama = /dorama|k.?drama|c.?drama|j.?drama|korean|\bkorea\b|chinese|\bchina\b|japanese|\bjapan\b|taiwan|thai|thailand|vietnamese|vietnam|filipino|philippines|hong.?kong|asian|asiatic/.test(text);
       const asianLanguageCode = /(^|[^a-z])(ko|kor|zh|zho|chi|ja|jpn|th|tha|vi|vie|yue)([^a-z]|$)/.test(mediaDetails);
       const hangulTitle = /[\uac00-\ud7af]/.test(String(title));
       if (asianDrama || asianLanguageCode || hangulTitle) return 'doramas';
