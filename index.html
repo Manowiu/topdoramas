@@ -103,7 +103,7 @@
     #filters { display:none !important; }
     .catalog-tabs { display:flex;gap:.5rem;overflow-x:auto;padding:.6rem 1rem .25rem;scrollbar-width:none; }
     .catalog-tabs::-webkit-scrollbar { display:none; }
-    .catalog-tab-btn { flex:0 0 auto;background:#111;border:1px solid #333;border-radius:999px;color:#ddd;padding:.45rem .9rem;font:inherit;font-size:.8rem;cursor:pointer; }
+    .catalog-tab-btn { flex:0 0 auto;background:#111;border:1px solid #333;border-radius:999px;color:#ddd;padding:.45rem .9rem;font:inherit;font-size:.8rem;cursor:pointer;text-decoration:none; }
     .catalog-tab-btn.active { background:#fff;border-color:#fff;color:#000;font-weight:700; }
     .catalog-controls { display:flex;gap:.65rem;padding:.25rem 1rem .75rem; }
     .catalog-controls label { flex:1;min-width:0;color:#999;font-size:.7rem; }
@@ -847,11 +847,11 @@
       </div>
     </section>
     <nav class="catalog-tabs" id="catalogTabs" aria-label="Guias do catálogo">
-      <button class="catalog-tab-btn active" data-src="loja" type="button" onclick="selectVodSource('loja')">Novelinhas</button>
-      <button class="catalog-tab-btn" data-src="doramas" type="button" onclick="selectVodSource('doramas')">Doramas</button>
-      <button class="catalog-tab-btn" data-src="movies" type="button" onclick="selectVodSource('movies')">Filmes</button>
-      <button class="catalog-tab-btn" data-src="series" type="button" onclick="selectVodSource('series')">Séries</button>
-      <button class="catalog-tab-btn" data-src="animes" type="button" onclick="selectVodSource('animes')">Animes</button>
+      <a class="catalog-tab-btn active" data-src="loja" href="?catalog=loja">Novelinhas</a>
+      <a class="catalog-tab-btn" data-src="doramas" href="?catalog=doramas">Doramas</a>
+      <a class="catalog-tab-btn" data-src="movies" href="?catalog=movies">Filmes</a>
+      <a class="catalog-tab-btn" data-src="series" href="?catalog=series">Séries</a>
+      <a class="catalog-tab-btn" data-src="animes" href="?catalog=animes">Animes</a>
     </nav>
         <div class="catalog-controls" id="catalogControls">
         <label>Gênero
@@ -1916,8 +1916,15 @@
       renderDoramas(currentFilter);
     }
 
-    function selectVodSource(source) {
+    function selectVodSource(source, updateAddress = true) {
+      const allowedSources = ['loja', 'doramas', 'movies', 'series', 'animes'];
+      if (!allowedSources.includes(source)) source = 'loja';
       vodSource = source;
+      if (updateAddress) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('catalog', source);
+        window.history.pushState({ catalog: source }, '', url.pathname + url.search + url.hash);
+      }
       document.querySelectorAll('#vodSources .filter-btn, #sideMenu .menu-category-btn, #bottom-nav .bottom-category-btn, #catalogTabs .catalog-tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.src === source);
       });
@@ -1944,6 +1951,17 @@
     document.querySelectorAll('#vodSources .filter-btn, #sideMenu .menu-category-btn').forEach(btn => {
       btn.onclick = () => selectVodSource(btn.dataset.src);
     });
+    document.querySelectorAll('#catalogTabs .catalog-tab-btn').forEach(tab => {
+      tab.addEventListener('click', event => {
+        event.preventDefault();
+        selectVodSource(tab.dataset.src);
+      });
+    });
+    window.addEventListener('popstate', () => {
+      const source = new URLSearchParams(window.location.search).get('catalog') || 'loja';
+      selectVodSource(source, false);
+    });
+
     document.getElementById('vodMore').onclick = () => {
       if (vodSource === 'loja' || !vodHasMore) return;
       if (vodSource === 'movies') loadVod('movies', vodPage + 1, true);
@@ -2116,7 +2134,8 @@
     renderDoramas = function(filter) {
       _origRender(filter);
     };
-    showNovelinhas();
+    const initialCatalog = new URLSearchParams(window.location.search).get('catalog') || 'loja';
+    selectVodSource(initialCatalog, false);
     updateCartUI();
 
     // ========== LGPD / PRIVACIDADE ==========
