@@ -1337,7 +1337,7 @@
       let result = items.filter(item => {
         const title = String(item.title || '').toLowerCase();
         const matchesQuery = !query || title.includes(query);
-        const matchesGenre = catalogGenre === 'all' || genreNames(item.genres).includes(catalogGenre);
+        const matchesGenre = catalogGenre === 'all' || genreNames(item).includes(catalogGenre);
         return matchesQuery && matchesGenre;
       });
       const year = item => parseInt(String(item.year || '').slice(0, 4), 10) || 0;
