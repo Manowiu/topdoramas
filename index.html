@@ -1341,20 +1341,20 @@
 
     function vodTitleBase(title) {
       return String(title || '')
-        .replace(/[\\[(【（]\\s*(?:L|LEG|LEGENDAS?|SUB(?:BED|TITLE|TITLED)?|D|DUB|DUBBED|DUBLAD[OA]S?|DUAL[ -]?Á?UDIO|ORIGINAL|PT[- ]?BR|PTBR|1080P|720P|4K)\\s*[\\])】）]/ig, '')
-        .replace(/\\b(?:LEGENDAS?|SUBBED|SUBTITLED|DUBLAD[OA]S?|DUBBED|DUAL[ -]?Á?UDIO|ÁUDIO ORIGINAL|ORIGINAL|PT[- ]?BR|PTBR)\\b/ig, '')
-        .replace(/\\s*[-|:]\\s*(?:L|LEG|D|DUB)\\s*$/ig, '')
-        .replace(/\\s+/g, ' ').trim();
+        .replace(/[\[(【（]\s*(?:L|LEG|LEGENDAS?|SUB(?:BED|TITLE|TITLED)?|D|DUB|DUBBED|DUBLAD[OA]S?|DUAL[ -]?Á?UDIO|ORIGINAL|PT[- ]?BR|PTBR|1080P|720P|4K)\s*[\])】）]/ig, '')
+        .replace(/\b(?:LEGENDAS?|SUBBED|SUBTITLED|DUBLAD[OA]S?|DUBBED|DUAL[ -]?Á?UDIO|ÁUDIO ORIGINAL|ORIGINAL|PT[- ]?BR|PTBR)\b/ig, '')
+        .replace(/\s*[-|:]\s*(?:L|LEG|D|DUB)\s*$/ig, '')
+        .replace(/\s+/g, ' ').trim();
     }
 
     function vodSourceLabel(item) {
       const source = [item.title, item.name, item.audio, item.language, item.subtitle, item.audio_codec, item.stream_type,
         item.source, item.audio_lang, item.language_name, item.filename, item.file_name]
         .filter(Boolean).join(' ');
-      if (/\\[L\\]|\\(L\\)|\\blegendas?\\b|\\bsub(?:bed|title|titled)?\\b|\\bleg\\b/i.test(source)) return 'Legendado';
-      if (/\\[D\\]|\\(D\\)|\\bdublad[oa]s?\\b|\\bdub(?:bed)?\\b/i.test(source)) return 'Dublado';
+      if (/\[L\]|\(L\)|\blegendas?\b|\bsub(?:bed|title|titled)?\b|\bleg\b/i.test(source)) return 'Legendado';
+      if (/\[D\]|\(D\)|\bdublad[oa]s?\b|\bdub(?:bed)?\b/i.test(source)) return 'Dublado';
       if (/dual[ -]?á?udio|dual[ -]?audio/i.test(source)) return 'Dual áudio';
-      if (/\\boriginal\\b/i.test(source)) return 'Áudio original';
+      if (/\boriginal\b/i.test(source)) return 'Áudio original';
       if (/pt[- ]?br|ptbr|portugu[eê]s/i.test(source)) return 'Português';
       return '';
     }
