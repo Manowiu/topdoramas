@@ -1956,7 +1956,7 @@
       [/^vivy\b/, 'animes'],
       [/^viral hit\b/, 'animes'],
       [/^beyblade\b/, 'animes'],
-      [/^do re mi\b/, 'animes']
+      [/^do[,\\s]+re\\s*&\\s*mi/, 'animes']
     ];
     function seriesBucket(item) {
       const title = typeof item === 'string' ? item : (item.name || item.title || '');
