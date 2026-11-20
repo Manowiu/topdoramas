@@ -1498,9 +1498,11 @@
     let vodAll = [];
     let nixSeries = null;
 
-    function seriesBucket(genre) {
-      const g = (genre || '').toLowerCase();
+    function seriesBucket(item) {
+      const g = (typeof item === 'string' ? item : (item.genre || '')).toLowerCase();
+      const n = (typeof item === 'string' ? '' : (item.name || item.title || '')).toLowerCase();
       if (/anima|anime|donghua|animation/.test(g)) return 'animes';
+      if (g.includes('soap') || /novela|novelinha/.test(g) || /novela|novelinha/.test(n)) return 'novelinhas';
       if (g.includes('drama')) return 'doramas';
       return 'series';
     }
@@ -1521,7 +1523,7 @@
           const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
           nixSeries = await (await fetch(url)).json();
         }
-        vodAll = nixSeries.filter(s => seriesBucket(s.genre) === type).map(s => ({
+        vodAll = nixSeries.filter(s => seriesBucket(s) === type).map(s => ({
           title: s.name,
           poster: s.cover,
           backdrop: Array.isArray(s.backdrop_path) ? s.backdrop_path[0] : s.backdrop_path,
@@ -1545,6 +1547,45 @@
       }
     }
 
+    async function showNovelinhas() {
+      renderDoramas(currentFilter);
+      try {
+        if (!nixSeries) {
+          const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
+          nixSeries = await (await fetch(url)).json();
+        }
+        const q = (document.getElementById('catalogSearch')?.value || '').trim().toLowerCase();
+        nixSeries.filter(s => seriesBucket(s) === 'novelinhas').forEach(s => {
+          const title = s.name || '';
+          if (q && !title.toLowerCase().includes(q)) return;
+          const item = {
+            title,
+            poster: s.cover,
+            year: (s.releaseDate || '').slice(0, 4),
+            synopsis: s.plot || '',
+            genres: s.genre || 'Novela',
+            type: 'serie',
+            series_id: s.series_id
+          };
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <span class="series-badge">NOVELINHA</span>
+            <img src="${item.poster || ''}" alt="" onerror="this.src='https://via.placeholder.com/500x750/111111/FFD700?text=VOD'">
+            <div class="card-info">
+              <h3>${item.title}</h3>
+              <div class="meta"><span>${item.year || ''}</span></div>
+              <button class="details-card-btn" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,#b4233a,#ff4d6d);color:#fff;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">Episódios</button>
+            </div>`;
+          card.querySelector('button').onclick = (e) => { e.stopPropagation(); openVod(item); };
+          card.onclick = () => openVod(item);
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     document.querySelectorAll('#vodSources .filter-btn').forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll('#vodSources .filter-btn').forEach(b => b.classList.remove('active'));
@@ -1554,7 +1595,7 @@
         if (vodSource === 'loja') {
           if (genreBar) genreBar.style.display = '';
           document.getElementById('vodMoreWrap').style.display = 'none';
-          renderDoramas(currentFilter);
+          showNovelinhas();
         } else {
           if (genreBar) genreBar.style.display = 'none';
           loadVod(vodSource, 1, false).catch(err => {
@@ -1575,7 +1616,7 @@
     if (searchInput) {
       searchInput.oninput = (e) => {
         searchQuery = e.target.value.trim().toLowerCase();
-        if (vodSource === 'loja') renderDoramas(currentFilter);
+        if (vodSource === 'loja') showNovelinhas();
         else renderVodGrid();
       };
     }
@@ -1736,7 +1777,7 @@
     renderDoramas = function(filter) {
       _origRender(filter);
     };
-    renderDoramas();
+    showNovelinhas();
     updateCartUI();
 
     // ========== LGPD / PRIVACIDADE ==========
