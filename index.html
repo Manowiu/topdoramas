@@ -1379,9 +1379,44 @@
       return false;
     }
 
-    function playStream(title, url) {
+    async function ensureVodAccess(title, purchaseTitle = title, purchaseAvailable = false) {
+      if (window.isVip) return true;
+      if (supabaseClient) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          const { data } = await supabaseClient
+            .from('purchases')
+            .select('id')
+            .eq('email', session.user.email)
+            .eq('dorama_title', purchaseTitle)
+            .eq('status', 'paid')
+            .limit(1);
+          if (data && data.length) {
+            const library = getLibrary(session.user.id);
+            if (!library.includes(purchaseTitle)) {
+              library.push(purchaseTitle);
+              saveLibrary(session.user.id, library);
+            }
+            return true;
+          }
+        }
+      }
+      if (purchaseAvailable) {
+        if (!supabaseClient || !(await supabaseClient.auth.getSession()).data.session) {
+          document.getElementById('authModal').classList.add('open');
+          return false;
+        }
+        if (!cart.includes(purchaseTitle)) cart.push(purchaseTitle);
+        updateCartUI();
+        document.getElementById('cartModal').classList.add('open');
+        return false;
+      }
+      return ensureVip();
+    }
+
+    function playStream(title, url, purchaseTitle = title, purchaseAvailable = false) {
       if (!url) { alert('Vídeo indisponível'); return; }
-      ensureVip().then(ok => {
+      ensureVodAccess(title, purchaseTitle, purchaseAvailable).then(ok => {
         if (!ok) return;
         window.location.href = 'assistir.html?' + new URLSearchParams({ title: title || 'VOD', video: url }).toString();
       });
@@ -1469,7 +1504,7 @@
             <span style="color:#FFD700;">▶</span>
           </div>`).join('');
         [...episodesEl.querySelectorAll('.episode-item')].forEach((el, i) => {
-          el.onclick = () => playStream(item.title + ' E' + item.episodes[i].episode, item.episodes[i].stream_url);
+          el.onclick = () => playStream(item.title + ' E' + item.episodes[i].episode, item.episodes[i].stream_url, item.title, !!item.purchaseAvailable);
         });
       } else {
         episodesEl.style.display = 'none';
@@ -1483,7 +1518,20 @@
         cartBtn.style.cssText = 'margin-top:1rem;width:100%;border:none;padding:0.7rem;border-radius:8px;font-weight:700;cursor:pointer;';
         document.querySelector('#modal .modal-content > div').appendChild(cartBtn);
       }
-      if (item.stream_url && !(item.episodes && item.episodes.length > 1)) {
+      if (item.purchaseAvailable) {
+        cartBtn.style.display = 'block';
+        const inCart = cart.includes(item.title);
+        cartBtn.textContent = inCart ? '✓ No carrinho' : '+ Adicionar ao Carrinho';
+        cartBtn.style.background = inCart ? '#333' : 'linear-gradient(90deg,var(--yellow),var(--orange))';
+        cartBtn.style.color = inCart ? '#aaa' : '#000';
+        cartBtn.onclick = () => {
+          if (!cart.includes(item.title)) cart.push(item.title);
+          updateCartUI();
+          cartBtn.textContent = '✓ No carrinho';
+          cartBtn.style.background = '#333';
+          cartBtn.style.color = '#aaa';
+        };
+      } else if (item.stream_url && !(item.episodes && item.episodes.length > 1)) {
         cartBtn.style.display = 'block';
         cartBtn.textContent = '▶ Assistir';
         cartBtn.style.background = '#b4233a';
@@ -1566,19 +1614,29 @@
             synopsis: s.plot || '',
             genres: s.genre || 'Novela',
             type: 'serie',
-            series_id: s.series_id
+            series_id: s.series_id,
+            purchaseAvailable: true
           };
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <span class="series-badge">NOVELINHA</span>
+            <span class="series-badge">MINIDRAMA</span>
             <img src="${item.poster || ''}" alt="" onerror="this.src='https://via.placeholder.com/500x750/111111/FFD700?text=VOD'">
             <div class="card-info">
               <h3>${item.title}</h3>
               <div class="meta"><span>${item.year || ''}</span></div>
-              <button class="details-card-btn" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,#b4233a,#ff4d6d);color:#fff;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">Episódios</button>
+              <button class="add-mini-cart-btn" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">+ Carrinho</button>
+              <button class="details-card-btn" style="margin-top:0.3rem;width:100%;background:transparent;border:1px solid #444;color:#aaa;padding:0.35rem;border-radius:6px;font-size:0.7rem;cursor:pointer;">Ver episódios</button>
             </div>`;
-          card.querySelector('button').onclick = (e) => { e.stopPropagation(); openVod(item); };
+          card.querySelector('.add-mini-cart-btn').onclick = (e) => {
+            e.stopPropagation();
+            if (!cart.includes(item.title)) cart.push(item.title);
+            updateCartUI();
+            e.currentTarget.textContent = '✓ No carrinho';
+            e.currentTarget.style.background = '#333';
+            e.currentTarget.style.color = '#aaa';
+          };
+          card.querySelector('.details-card-btn').onclick = (e) => { e.stopPropagation(); openVod(item); };
           card.onclick = () => openVod(item);
           grid.appendChild(card);
         });
