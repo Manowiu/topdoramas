@@ -1510,6 +1510,11 @@
       else renderVodGrid();
     };
 
+    function canWatchNovelinha(item) {
+      const userId = window.currentUserId;
+      return !!window.isVip || !!window.isAdmin || (!!userId && getLibrary(userId).includes(item.title));
+    }
+
     function renderDoramas(filter = currentFilter) {
       currentFilter = filter;
       grid.innerHTML = '';
@@ -1529,16 +1534,22 @@
               <span>${item.year}</span>
               <span class="rating">★ ${item.rating}</span>
             </div>
-            <button class="add-cart-card-btn" data-title="${item.title.replace(/"/g, '"')}" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">+ Carrinho</button>
+            ${canWatchNovelinha(item)
+              ? '<button class="watch-novelinha-card-btn" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,#16834a,#25b86a);color:#fff;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">▶ Assistir</button>'
+              : '<button class="add-cart-card-btn" style="margin-top:0.4rem;width:100%;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;padding:0.4rem;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;">+ Carrinho</button>'}
             <button class="details-card-btn" style="margin-top:0.3rem;width:100%;background:transparent;border:1px solid #444;color:#aaa;padding:0.35rem;border-radius:6px;font-size:0.7rem;cursor:pointer;">Ver detalhes</button>
           </div>
         `;
-        const addBtn = card.querySelector('.add-cart-card-btn');
-        addBtn.onclick = (e) => {
+        const watchBtn = card.querySelector('.watch-novelinha-card-btn');
+        if (watchBtn) watchBtn.onclick = (e) => {
           e.stopPropagation();
-          const title = addBtn.dataset.title;
-          if (!cart.includes(title)) {
-            cart.push(title);
+          window.assistirDorama(item.title);
+        };
+        const addBtn = card.querySelector('.add-cart-card-btn');
+        if (addBtn) addBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (!cart.includes(item.title)) {
+            cart.push(item.title);
             updateCartUI();
             addBtn.textContent = '✓ No carrinho';
             addBtn.style.background = '#333';
@@ -1596,19 +1607,30 @@
         document.querySelector('#modal .modal-content > div').appendChild(cartBtn);
       }
       const inCart = cart.includes(item.title);
-      cartBtn.textContent = inCart ? '✓ No carrinho' : '+ Adicionar ao Carrinho';
-      cartBtn.style.background = inCart ? '#333' : 'linear-gradient(90deg,var(--yellow),var(--orange))';
-      cartBtn.style.color = inCart ? '#aaa' : '#000';
-      cartBtn.onclick = () => {
-        if (!cart.includes(item.title)) {
-          cart.push(item.title);
-          updateCartUI();
-          renderDoramas(currentFilter);
-        }
-        cartBtn.textContent = '✓ No carrinho';
-        cartBtn.style.background = '#333';
-        cartBtn.style.color = '#aaa';
-      };
+      const canWatch = canWatchNovelinha(item);
+      if (canWatch) {
+        cartBtn.textContent = '▶ Assistir';
+        cartBtn.style.background = 'linear-gradient(90deg,#16834a,#25b86a)';
+        cartBtn.style.color = '#fff';
+        cartBtn.onclick = () => {
+          modal.classList.remove('open');
+          window.assistirDorama(item.title);
+        };
+      } else {
+        cartBtn.textContent = inCart ? '✓ No carrinho' : '+ Adicionar ao Carrinho';
+        cartBtn.style.background = inCart ? '#333' : 'linear-gradient(90deg,var(--yellow),var(--orange))';
+        cartBtn.style.color = inCart ? '#aaa' : '#000';
+        cartBtn.onclick = () => {
+          if (!cart.includes(item.title)) {
+            cart.push(item.title);
+            updateCartUI();
+            renderDoramas(currentFilter);
+          }
+          cartBtn.textContent = '✓ No carrinho';
+          cartBtn.style.background = '#333';
+          cartBtn.style.color = '#aaa';
+        };
+      }
       
       // Botão voltar ao catálogo
       let backBtn = document.getElementById('modalBackBtn');
@@ -2529,6 +2551,8 @@
       const cartBtn = `<button class="cart-btn" id="cartBtn">🛒<span class="cart-count" id="cartCount">${cart.length}</span></button>`;
       
       if (!supabaseClient) {
+        window.currentUserId = null;
+        window.isAdmin = false;
         authArea.innerHTML = cartBtn + `<button class="auth-btn" id="openAuth">Entrar / Criar conta</button>`;
         setupAuthButton();
         setupCartButton();
@@ -2537,8 +2561,10 @@
       try {
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
+          window.currentUserId = session.user.id;
+          window.isAdmin = session.user.user_metadata?.role === 'admin' || session.user.email === 'admin@topdoramas.com';
           const name = session.user.user_metadata?.name || session.user.email.split('@')[0];
-          const isAdmin = session.user.user_metadata?.role === 'admin' || session.user.email === 'admin@topdoramas.com';
+          const isAdmin = window.isAdmin;
           authArea.innerHTML = cartBtn + `
             <span class="user-name">Olá, ${name}${isAdmin ? ' (Admin)' : ''}</span>
             <button class="my-doramas-btn" id="myDoramasBtn">Meus Doramas</button>
@@ -2559,6 +2585,9 @@
           }
           setupCartButton();
         } else {
+          window.currentUserId = null;
+          window.isAdmin = false;
+          window.isVip = false;
           authArea.innerHTML = cartBtn + `<button class="auth-btn" id="openAuth">Entrar / Criar conta</button>`;
           setupAuthButton();
           setupCartButton();
@@ -3204,13 +3233,15 @@
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) return;
       const email = session.user.email;
-      if (session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com') window.isVip = true;
+      window.currentUserId = session.user.id;
+      const metadataVip = session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com';
+      const previousVip = !!window.isVip;
       const { data } = await supabaseClient
         .from('purchases')
         .select('dorama_title, created_at')
         .eq('email', email)
         .eq('status', 'paid');
-      window.isVip = hasActiveVip(data || []);
+      window.isVip = metadataVip || hasActiveVip(data || []);
       if (data && data.length) {
         const userId = session.user.id;
         const library = getLibrary(userId);
@@ -3222,7 +3253,10 @@
           }
         });
         if (changed) saveLibrary(userId, library);
+        if (changed && vodSource === 'loja') renderDoramas(currentFilter);
       }
+      if (previousVip !== !!window.isVip && vodSource === 'loja') renderDoramas(currentFilter);
+      updateVipNav();
     }
 
     // Roda a sincronização ao carregar e a cada 15s
