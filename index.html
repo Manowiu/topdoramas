@@ -49,7 +49,14 @@
       transition: transform .2s ease; padding: 1rem; border-left: 1px solid #222;
     }
     .side-menu.open { transform: translateX(0); }
-    .side-menu .auth-area { display: flex; flex-direction: column; gap: .6rem; margin-top: 1.5rem; }
+    .side-menu .auth-area { display: flex; flex-direction: column; gap: .6rem; margin-top: 1rem; }
+    .menu-categories { display: grid; gap: .55rem; margin-top: 1.5rem; }
+    .menu-categories h2 { margin: 0 0 .25rem; font-size: .9rem; color: #aaa; }
+    .menu-category-btn {
+      width: 100%; padding: .65rem .85rem; border: 1px solid #333; border-radius: 10px;
+      background: #151515; color: #fff; text-align: left; font: inherit; cursor: pointer;
+    }
+    .menu-category-btn.active { background: #fff; border-color: #fff; color: #000; font-weight: 700; }
     .hero {
       position: relative; height: 42vh; min-height: 280px;
       background: #111 center/cover no-repeat; margin: 0;
@@ -746,6 +753,14 @@
   </header>
   <div class="side-menu" id="sideMenu">
     <button class="menu-btn" id="closeMenu" style="font-size:1.6rem;">×</button>
+    <div class="menu-categories">
+      <h2>Categorias</h2>
+      <button class="menu-category-btn active" data-src="loja" type="button">Novelinhas</button>
+      <button class="menu-category-btn" data-src="doramas" type="button">Doramas</button>
+      <button class="menu-category-btn" data-src="movies" type="button">Filmes</button>
+      <button class="menu-category-btn" data-src="series" type="button">Séries</button>
+      <button class="menu-category-btn" data-src="animes" type="button">Animes</button>
+    </div>
     <div class="auth-area" id="authArea" style="display:flex;flex-direction:column;gap:.6rem;">
       <button class="vip-btn" id="openAuth">ENTRAR</button>
       <button class="cart-btn" id="cartBtn">🛒 Carrinho <span class="cart-count" id="cartCount">0</span></button>
@@ -1645,24 +1660,29 @@
       }
     }
 
-    document.querySelectorAll('#vodSources .filter-btn').forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll('#vodSources .filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        vodSource = btn.dataset.src;
-        const genreBar = document.getElementById('filters');
-        if (vodSource === 'loja') {
-          if (genreBar) genreBar.style.display = '';
-          document.getElementById('vodMoreWrap').style.display = 'none';
-          showNovelinhas();
-        } else {
-          if (genreBar) genreBar.style.display = 'none';
-          loadVod(vodSource, 1, false).catch(err => {
-            grid.innerHTML = '<p style="color:#f66;padding:1rem;">Não foi possível carregar o VOD.</p>';
-            console.error(err);
-          });
-        }
-      };
+    function selectVodSource(source) {
+      vodSource = source;
+      document.querySelectorAll('#vodSources .filter-btn, #sideMenu .menu-category-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.src === source);
+      });
+      document.getElementById('sideMenu').classList.remove('open');
+      const genreBar = document.getElementById('filters');
+      if (source === 'loja') {
+        if (genreBar) genreBar.style.display = '';
+        document.getElementById('vodMoreWrap').style.display = 'none';
+        showNovelinhas();
+      } else {
+        if (genreBar) genreBar.style.display = 'none';
+        loadVod(source, 1, false).catch(err => {
+          grid.innerHTML = '<p style="color:#f66;padding:1rem;">Não foi possível carregar o VOD.</p>';
+          console.error(err);
+        });
+      }
+      document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.querySelectorAll('#vodSources .filter-btn, #sideMenu .menu-category-btn').forEach(btn => {
+      btn.onclick = () => selectVodSource(btn.dataset.src);
     });
     document.getElementById('vodMore').onclick = () => {
       if (vodSource === 'loja' || !vodHasMore) return;
