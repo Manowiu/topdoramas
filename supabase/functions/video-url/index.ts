@@ -25,6 +25,7 @@ const videoKeys: Record<string, string> = {
   'Fui Entregue a um Mafioso à Beira da Morte': 'fuientregueaomafioso.mp4',
   'Você Cancelou o Nosso Casamento, Então Eu Casei com o Seu Rival': 'vocecancelounossocasamento.mp4',
   'Casada com o Bilionário Sem Saber': 'casadacombilionario.mp4',
+  'Suas Lágrimas Não Significam Nada Agora': 'suaslagrimas.mp4',
 }
 
 Deno.serve(async (req) => {
@@ -67,11 +68,13 @@ Deno.serve(async (req) => {
       .select('id, dorama_title')
       .eq('email', user.email)
       .eq('status', 'paid')
-      .or(`dorama_title.eq.${title},dorama_title.eq.Assinatura VIP`)
+      .or(`dorama_title.eq.${title},dorama_title.ilike.Assinatura VIP%`)
 
-    const hasAccess = purchase && purchase.length > 0
     const isAdmin = user.email === 'admin@topdoramas.com' || user.user_metadata?.role === 'admin'
-    if (!hasAccess && !isAdmin) {
+    const isVipUser = isAdmin || user.user_metadata?.vip === true || user.email === 'gabrieltanajura@gmail.com'
+    const hasVipPurchase = purchase?.some(p => (p.dorama_title || '').startsWith('Assinatura VIP'))
+    const hasTitle = purchase?.some(p => p.dorama_title === title)
+    if (!hasTitle && !hasVipPurchase && !isVipUser) {
       return new Response(JSON.stringify({ error: 'Você não comprou este dorama' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
