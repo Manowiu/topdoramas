@@ -772,9 +772,8 @@
     .catalog-controls { max-width:440px; margin:0 0 13px auto; padding:0; gap:10px; }
     .catalog-controls label { color:#aaa9b0; font-size:.73rem; }
     .catalog-controls select { background:#171920; border-color:#30313a; border-radius:9px; }
-    .grid { display:flex; gap:13px; overflow-x:auto; padding:2px 2px 10px; scrollbar-width:none; scroll-snap-type:x proximity; }
-    .grid::-webkit-scrollbar { display:none; }
-    .card { flex:0 0 170px; border:1px solid #24252b; border-radius:10px; background:#111319; scroll-snap-align:start; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:14px; padding:2px 2px 10px; }
+    .card { min-width:0; border:1px solid #24252b; border-radius:10px; background:#111319; }
     .card img { width:100%; height:238px; object-fit:cover; }
     .card-info { padding:.65rem; }
     .card-info h3 { color:#f4f2ee; font-size:.88rem; line-height:1.2; }
@@ -798,7 +797,7 @@
       .catalog-section-heading h2 { font-size:.96rem; }
       .catalog-controls { max-width:none; margin:0 0 12px; padding:0; gap:8px; }
       .catalog-controls select { padding:.56rem .55rem; font-size:.76rem; }
-      .card { flex-basis:140px; }
+      .grid { grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:11px; }
       .card img { height:198px; }
       .card-info { padding:.55rem; }
       .card-info h3 { font-size:.8rem; }
@@ -809,7 +808,7 @@
       .app-header img { max-width:122px; }
       .header-vip-btn { padding:.38rem .45rem; font-size:.62rem; }
       .catalog-tab-btn { font-size:.59rem; }
-      .card { flex-basis:128px; }
+      .grid { grid-template-columns:repeat(auto-fill,minmax(122px,1fr)); gap:9px; }
       .card img { height:180px; }
     }
 </style>
