@@ -1964,17 +1964,21 @@
       const titleOverride = SERIES_TITLE_OVERRIDES.find(([pattern]) => pattern.test(normalizedTitle));
       if (titleOverride) return titleOverride[1];
 
+      const categoryValue = typeof item === 'string' ? item : item.category;
+      const nestedCategory = categoryValue && typeof categoryValue === 'object'
+        ? (categoryValue.category_name || categoryValue.name || categoryValue.title || '')
+        : categoryValue;
       const text = typeof item === 'string'
         ? item.toLowerCase()
         : [
-            item.category_name, item.categoryName, item.category, item.category_title,
+            item.category_name, item.categoryName, nestedCategory, item.category_title,
             item.genre, item.genres, item.country, item.country_name, item.language,
             item.original_language, item.language_code, item.type, item.stream_type,
             item.name, item.title
           ].filter(Boolean).join(' ').toLowerCase();
       const category = typeof item === 'string'
         ? item.toLowerCase()
-        : [item.category_name, item.categoryName, item.category, item.category_title].filter(Boolean).join(' ').toLowerCase();
+        : [item.category_name, item.categoryName, nestedCategory, item.category_title].filter(Boolean).join(' ').toLowerCase();
       const mediaDetails = typeof item === 'string'
         ? text
         : [item.genre, item.genres, item.country, item.country_name, item.language, item.original_language, item.language_code, item.type, item.stream_type].filter(Boolean).join(' ').toLowerCase();
@@ -2034,7 +2038,7 @@
             name: item.name || item.title || item.series_name || '',
             cover: item.cover || item.poster || item.stream_icon || '',
             series_id: item.series_id ?? item.id_tmdb ?? item.tmdb_id ?? item.stream_id ?? item.id,
-            category_name: item.category_name || item.categoryName || item.category || categories.get(String(item.category_id ?? '')) || ''
+            category_name: item.category_name || item.categoryName || (typeof item.category === 'string' ? item.category : item.category?.category_name || item.category?.name) || categories.get(String(item.category_id ?? item.category?.category_id ?? (typeof item.category === 'number' ? item.category : ''))) || ''
           }));
           nixSeriesCategories = categoriesPayload;
           return nixSeries;
