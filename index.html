@@ -1990,6 +1990,34 @@
       return 'series';
     }
 
+    let nixSeriesLoadPromise = null;
+    async function ensureNixSeriesCatalog() {
+      if (!nixSeriesLoadPromise) {
+        nixSeriesLoadPromise = (async () => {
+          const seriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
+          const rawSeries = await (await fetch(seriesUrl)).json();
+          let categoriesPayload = [];
+          const categoriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_categories`;
+          try { categoriesPayload = await (await fetch(categoriesUrl)).json(); } catch (e) {}
+          const categoryList = Array.isArray(categoriesPayload) ? categoriesPayload : (categoriesPayload?.categories || categoriesPayload?.data || []);
+          const categories = new Map(categoryList.map(category => [
+            String(category.category_id ?? category.id ?? ''),
+            category.category_name || category.name || ''
+          ]));
+          nixSeries = (Array.isArray(rawSeries) ? rawSeries : []).map(item => ({
+            ...item,
+            category_name: item.category_name || item.categoryName || categories.get(String(item.category_id ?? '')) || ''
+          }));
+          nixSeriesCategories = categoriesPayload;
+          return nixSeries;
+        })().catch(error => {
+          nixSeriesLoadPromise = null;
+          throw error;
+        });
+      }
+      return await nixSeriesLoadPromise;
+    }
+
     async function loadVod(type, page, append) {
       const requestVersion = ++vodRequestVersion;
       if (!append) grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Carregando catálogo...</p>';
@@ -2004,27 +2032,9 @@
         vodHasMore = page < (json.pagination?.total_pages || 1);
         renderVodGrid();
       } else {
-        if (!nixSeries) {
-          const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
-          nixSeries = await (await fetch(url)).json();
-        }
-        if (!nixSeriesCategories) {
-          const url = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_categories`;
-          try { nixSeriesCategories = await (await fetch(url)).json(); } catch (e) { nixSeriesCategories = []; }
-          const categoryList = Array.isArray(nixSeriesCategories)
-            ? nixSeriesCategories
-            : (nixSeriesCategories?.categories || nixSeriesCategories?.data || []);
-          const categories = new Map(categoryList.map(category => [
-            String(category.category_id ?? category.id ?? ''),
-            category.category_name || category.name || ''
-          ]));
-          nixSeries = (Array.isArray(nixSeries) ? nixSeries : []).map(item => ({
-            ...item,
-            category_name: item.category_name || item.categoryName || categories.get(String(item.category_id ?? '')) || ''
-          }));
-        }
+        const seriesCatalog = await ensureNixSeriesCatalog();
         if (requestVersion !== vodRequestVersion || vodSource !== type) return;
-        vodAll = nixSeries.filter(s => seriesBucket(s) === type).map(s => ({
+        vodAll = seriesCatalog.filter(s => seriesBucket(s) === type).map(s => ({
           title: s.name,
           poster: s.cover,
           backdrop: Array.isArray(s.backdrop_path) ? s.backdrop_path[0] : s.backdrop_path,
@@ -2138,12 +2148,115 @@
     };
 
     let searchQuery = '';
-    const searchInput = document.getElementById('catalogSearch');
-    if (searchInput) {
-      searchInput.oninput = (e) => {
-        searchQuery = e.target.value.trim().toLowerCase();
+    let globalSearchVersion = 0;
+    let allMovieItemsCache = null;
+    let allMovieItemsPromise = null;
+    let globalSearchActive = false;
+
+    function normalizeSearchText(value) {
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    }
+
+    async function getAllMovieCatalogItems() {
+      if (allMovieItemsCache) return allMovieItemsCache;
+      if (allMovieItemsPromise) return allMovieItemsPromise;
+      allMovieItemsPromise = (async () => {
+        const firstUrl = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=1`;
+        const firstJson = await (await fetch(firstUrl)).json();
+        const all = [...(firstJson.data || [])];
+        const totalPages = Math.max(1, Number(firstJson.pagination?.total_pages) || 1);
+        for (let start = 2; start <= totalPages; start += 6) {
+          const pages = Array.from({ length: Math.min(6, totalPages - start + 1) }, (_, i) => start + i);
+          const batches = await Promise.all(pages.map(async page => {
+            const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
+            const json = await (await fetch(url)).json();
+            return json.data || [];
+          }));
+          batches.forEach(items => all.push(...items));
+        }
+        allMovieItemsCache = all;
+        return all;
+      })().catch(error => {
+        allMovieItemsPromise = null;
+        throw error;
+      });
+      return allMovieItemsPromise;
+    }
+
+    function renderGlobalSearchResults(results, query) {
+      const catalogHeading = document.getElementById('catalogHeading');
+      if (catalogHeading) catalogHeading.textContent = 'Resultados da busca';
+      const requestBtn = document.getElementById('requestBtn');
+      if (requestBtn) requestBtn.style.display = 'none';
+      grid.innerHTML = '';
+      if (!results.length) {
+        grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Nenhum título encontrado em todos os catálogos.</p>';
+        document.getElementById('vodMoreWrap').style.display = 'none';
+        return;
+      }
+      results.forEach(({ item, source }) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <span class="series-badge">${source === 'loja' ? 'NOVELINHA' : source === 'doramas' ? 'DORAMA' : source === 'movies' ? 'FILME' : source === 'animes' ? 'ANIME' : 'SÉRIE'}</span>
+          <img src="${item.poster || item.cover || ''}" alt="" onerror="this.src='https://via.placeholder.com/500x750/111111/FFD700?text=TopDoramas'">
+          <div class="card-info"><h3>${item.title || item.name || ''}</h3><div class="meta"><span>${item.year || item.releaseDate || ''}</span></div></div>`;
+        card.onclick = () => source === 'loja' ? openModal(item) : openVod(item);
+        grid.appendChild(card);
+      });
+      document.getElementById('vodMoreWrap').style.display = 'none';
+    }
+
+    async function performGlobalSearch(rawQuery) {
+      const query = normalizeSearchText(rawQuery);
+      const requestVersion = ++globalSearchVersion;
+      globalSearchActive = query.length > 0;
+      if (!query) {
+        const catalogHeading = document.getElementById('catalogHeading');
+        const titles = { loja: 'Novelinhas Nacionais e Internacionais', doramas: 'Doramas em Destaque', movies: 'Filmes em Destaque', series: 'Séries Imperdíveis', animes: 'Animes em Alta' };
+        if (catalogHeading) catalogHeading.textContent = titles[vodSource] || 'Destaques da Semana';
         if (vodSource === 'loja') showNovelinhas();
         else renderVodGrid();
+        return;
+      }
+      grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Buscando em todos os catálogos...</p>';
+      document.getElementById('vodMoreWrap').style.display = 'none';
+      try {
+        const [seriesCatalog, movieCatalog] = await Promise.all([ensureNixSeriesCatalog(), getAllMovieCatalogItems()]);
+        if (requestVersion !== globalSearchVersion) return;
+        const needle = query;
+        const matches = [];
+        const addMatches = (items, source) => items.forEach(item => {
+          const title = item.title || item.name || '';
+          if (normalizeSearchText(title).includes(needle)) matches.push({ item, source });
+        });
+        addMatches(doramas, 'loja');
+        seriesCatalog.filter(item => seriesBucket(item) !== 'novelinhas').forEach(raw => {
+          const bucket = seriesBucket(raw);
+          const item = {
+            title: raw.name || raw.title, poster: raw.cover || raw.poster,
+            backdrop: Array.isArray(raw.backdrop_path) ? raw.backdrop_path[0] : raw.backdrop_path,
+            year: (raw.releaseDate || '').slice(0, 4), synopsis: raw.plot || '',
+            genres: raw.genre || bucket, type: 'serie', series_id: raw.series_id
+          };
+          if (normalizeSearchText(item.title).includes(needle)) matches.push({ item, source: bucket });
+        });
+        addMatches(movieCatalog, 'movies');
+        matches.sort((a, b) => String(a.item.title || a.item.name || '').localeCompare(String(b.item.title || b.item.name || ''), 'pt-BR'));
+        if (requestVersion === globalSearchVersion) renderGlobalSearchResults(matches.slice(0, 96), query);
+      } catch (error) {
+        if (requestVersion === globalSearchVersion) grid.innerHTML = '<p style="color:#f88;padding:1rem;">Não foi possível pesquisar todos os catálogos agora. Tente novamente.</p>';
+        console.error('Erro na busca global:', error);
+      }
+    }
+
+    const searchInput = document.getElementById('catalogSearch');
+    if (searchInput) {
+      let searchTimer;
+      searchInput.oninput = event => {
+        searchQuery = event.target.value.trim().toLowerCase();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => performGlobalSearch(searchQuery), 300);
       };
     }
     const _renderDoramas = renderDoramas;
