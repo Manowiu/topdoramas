@@ -2689,18 +2689,23 @@
 
     async function criarPagamentoS6X(method) {
       const name = document.getElementById('buyerName').value.trim();
-      const email = document.getElementById('buyerEmail').value.trim();
-      if (!name || !email) {
-        alert('Preencha nome e e-mail');
+      const email = document.getElementById('buyerEmail').value.trim().toLowerCase();
+      if (!name || name.length < 3) {
+        alert('Digite o nome completo');
+        return null;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert('Digite um e-mail válido');
         return null;
       }
 
+      const amount = Number((window.vipCheckoutPlan ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(cart.length || 1)).toFixed(2));
       const body = {
-        amount: window.vipCheckoutPlan ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(cart.length || 1),
+        amount,
         customer: { name, email },
-        description: currentPurchaseTitle,
-        product: { name: currentPurchaseTitle },
-        order_reference: (currentPurchaseTitle || 'pedido') + '-' + Date.now(),
+        description: (currentPurchaseTitle || 'TopDoramas').slice(0, 120),
+        product: { name: (currentPurchaseTitle || 'TopDoramas').slice(0, 80) },
+        order_reference: 'td-' + Date.now(),
         payment_method: method
       };
       if (method === 'card') {
@@ -2719,7 +2724,8 @@
         });
         const json = await res.json();
         if (!json.success) {
-          alert(json.message || json.error || 'Erro ao criar pagamento: ' + JSON.stringify(json));
+          const detail = json.errors ? ' ' + JSON.stringify(json.errors) : '';
+          alert((json.message || json.error || 'Erro ao criar pagamento') + detail);
           return null;
         }
         return json.data;
