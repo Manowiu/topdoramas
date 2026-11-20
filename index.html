@@ -1500,7 +1500,8 @@
         .eq('email', session.user.email)
         .eq('status', 'paid')
         .like('dorama_title', 'Assinatura VIP%');
-      window.isVip = hasActiveVip(data || [], false);\n      updateVipNav();
+      window.isVip = hasActiveVip(data || [], false);
+      updateVipNav();
       if (window.isVip) return true;
       document.getElementById('vipModal').classList.add('open');
       return false;
@@ -2114,6 +2115,7 @@
           document.getElementById('logoutBtn').onclick = async () => {
             await supabaseClient.auth.signOut();
             window.isVip = false;
+            updateVipNav();
             updateAuthUI();
           };
           const myBtn = document.getElementById('myDoramasBtn');
@@ -2737,6 +2739,7 @@
       });
     }
     updateAuthUI();
+    updateVipNav();
     setupAuthButton();
     setupCartButton();
 
