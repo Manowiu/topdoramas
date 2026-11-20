@@ -1286,7 +1286,7 @@
     let catalogSort = 'default';
 
     function genreNames(value) {
-      const values = Array.isArray(value) ? value : String(value || '').split(/[,|/]/);
+      const values = Array.isArray(value) ? value : String(value || '').split(',').flatMap(part => part.split('|')).flatMap(part => part.split('/'));
       return values.map(item => typeof item === 'object' ? (item.name || item.title || '') : String(item))
         .map(name => name.trim()).filter(Boolean);
     }
