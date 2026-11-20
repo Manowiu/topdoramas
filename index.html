@@ -1996,8 +1996,31 @@
     async function ensureNixSeriesCatalog() {
       if (!nixSeriesLoadPromise) {
         nixSeriesLoadPromise = (async () => {
-          const seriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
-          const rawSeries = await (await fetch(seriesUrl)).json();
+          let rawSeries = [];
+          try {
+            const firstUrl = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=series&page=1`;
+            const firstJson = await (await fetch(firstUrl)).json();
+            rawSeries = Array.isArray(firstJson) ? firstJson : (firstJson.data || firstJson.series || []);
+            const totalPages = Math.max(1, Number(firstJson.pagination?.total_pages) || 1);
+            for (let start = 2; start <= totalPages; start += 6) {
+              const pages = Array.from({ length: Math.min(6, totalPages - start + 1) }, (_, index) => start + index);
+              const batch = await Promise.all(pages.map(async page => {
+                const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=series&page=${page}`;
+                const json = await (await fetch(url)).json();
+                return Array.isArray(json) ? json : (json.data || json.series || []);
+              }));
+              batch.forEach(items => rawSeries.push(...items));
+            }
+          } catch (catalogError) {
+            console.warn('Catálogo de séries Nix Play indisponível; usando a lista Xtream.', catalogError);
+          }
+
+          if (!Array.isArray(rawSeries) || !rawSeries.length) {
+            const fallbackUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series`;
+            const fallback = await (await fetch(fallbackUrl)).json();
+            rawSeries = Array.isArray(fallback) ? fallback : (fallback.data || fallback.series || []);
+          }
+
           let categoriesPayload = [];
           const categoriesUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_categories`;
           try { categoriesPayload = await (await fetch(categoriesUrl)).json(); } catch (e) {}
@@ -2006,9 +2029,12 @@
             String(category.category_id ?? category.id ?? ''),
             category.category_name || category.name || ''
           ]));
-          nixSeries = (Array.isArray(rawSeries) ? rawSeries : []).map(item => ({
+          nixSeries = rawSeries.map(item => ({
             ...item,
-            category_name: item.category_name || item.categoryName || categories.get(String(item.category_id ?? '')) || ''
+            name: item.name || item.title || item.series_name || '',
+            cover: item.cover || item.poster || item.stream_icon || '',
+            series_id: item.series_id ?? item.id_tmdb ?? item.tmdb_id ?? item.stream_id ?? item.id,
+            category_name: item.category_name || item.categoryName || item.category || categories.get(String(item.category_id ?? '')) || ''
           }));
           nixSeriesCategories = categoriesPayload;
           return nixSeries;
@@ -2037,8 +2063,8 @@
         const seriesCatalog = await ensureNixSeriesCatalog();
         if (requestVersion !== vodRequestVersion || vodSource !== type) return;
         vodAll = seriesCatalog.filter(s => seriesBucket(s) === type).map(s => ({
-          title: s.name,
-          poster: s.cover,
+          title: s.name || s.title || s.series_name,
+          poster: s.cover || s.poster || s.stream_icon,
           backdrop: Array.isArray(s.backdrop_path) ? s.backdrop_path[0] : s.backdrop_path,
           year: (s.releaseDate || '').slice(0, 4),
           synopsis: s.plot || '',
