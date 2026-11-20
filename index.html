@@ -2592,6 +2592,7 @@
           setupAuthButton();
           setupCartButton();
         }
+        if (vodSource === 'loja') renderDoramas(currentFilter);
       } catch (err) {
         console.error('Auth UI error:', err);
         authArea.innerHTML = cartBtn + `<button class="auth-btn" id="openAuth">Entrar / Criar conta</button>`;
