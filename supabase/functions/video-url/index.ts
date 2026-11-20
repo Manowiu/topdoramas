@@ -25,7 +25,7 @@ const videoKeys: Record<string, string> = {
   'Fui Entregue a um Mafioso à Beira da Morte': 'fuientregueaomafioso.mp4',
   'Você Cancelou o Nosso Casamento, Então Eu Casei com o Seu Rival': 'vocecancelounossocasamento.mp4',
   'Casada com o Bilionário Sem Saber': 'casadacombilionario.mp4',
-  'Suas Lágrimas Não Significam Nada Agora': 'suaslagrimas.mp4',
+  'Suas Lágrimas Não Significam Nada Agora': '1118.mp4',
 }
 
 Deno.serve(async (req) => {
