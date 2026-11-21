@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
       'aurifbarbosa@gmail.com': ['Ele Devia Tudo a Mim'],
       'willgabi24@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
       'koalagamepls@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
+      'vitoriacon@gmail.com': ['Ele Devia Tudo a Mim'],
     }
     const ownedTitles = Array.isArray(user.user_metadata?.owned_titles) ? user.user_metadata.owned_titles : []
     const isAdmin = user.email === 'admin@topdoramas.com' || user.user_metadata?.role === 'admin'
