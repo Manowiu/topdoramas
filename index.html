@@ -2247,8 +2247,12 @@
       const params = new URLSearchParams(window.location.search);
       const source = params.get('catalog') || 'loja';
       selectVodSource(source, false);
-      const novelinha = params.get('novelinha');
-      if (source === 'loja' && novelinha) openNovelinhaPage(novelinha, false);
+      const novelinha = params.get('novelinha') || params.get('dorama');
+      if (novelinha) {
+        const normalizedSlug = normalizeSearchText(novelinha.replace(/[-_]+/g, ' '));
+        const item = doramas.find(d => normalizeSearchText(d.title) === normalizedSlug || normalizeSearchText(d.title).includes(normalizedSlug) || normalizedSlug.includes(normalizeSearchText(d.title)));
+        if (item) openNovelinhaPage(item.title, false);
+      }
     });
 
     let vodMoreLoading = false;
@@ -2435,16 +2439,6 @@
 
     renderDoramas();
 
-    // Abre pop-up se vier de anúncio com ?dorama=Nome
-    const urlParams = new URLSearchParams(window.location.search);
-    const doramaParam = urlParams.get('dorama');
-    if (doramaParam) {
-      const item = doramas.find(d => d.title.toLowerCase() === doramaParam.toLowerCase() || d.title.toLowerCase().includes(doramaParam.toLowerCase()));
-      if (item) {
-        setTimeout(() => openModal(item), 300);
-      }
-    }
-
     // Botão pedir título
     const requestBtn = document.getElementById('requestBtn');
     if (requestBtn) {
@@ -2560,13 +2554,19 @@
     renderDoramas = function(filter) {
       _origRender(filter);
     };
-    let initialCatalog = new URLSearchParams(window.location.search).get('catalog');
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialNovelinha = initialParams.get('novelinha') || initialParams.get('dorama');
+    let initialCatalog = initialParams.get('catalog');
+    if (initialNovelinha) initialCatalog = 'loja';
     if (!initialCatalog) { try { initialCatalog = sessionStorage.getItem('topdoramas_catalog'); } catch (e) {} }
     initialCatalog = initialCatalog || 'loja';
     selectVodSource(initialCatalog, false);
     updateCartUI();
-    const initialNovelinha = new URLSearchParams(window.location.search).get('novelinha');
-    if (initialCatalog === 'loja' && initialNovelinha) openNovelinhaPage(initialNovelinha, false);
+    if (initialNovelinha) {
+      const normalizedSlug = normalizeSearchText(initialNovelinha.replace(/[-_]+/g, ' '));
+      const initialItem = doramas.find(d => normalizeSearchText(d.title) === normalizedSlug || normalizeSearchText(d.title).includes(normalizedSlug) || normalizedSlug.includes(normalizeSearchText(d.title)));
+      if (initialItem) openNovelinhaPage(initialItem.title, false);
+    }
 
     // ========== LGPD / PRIVACIDADE ==========
     // Storage seguro
