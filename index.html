@@ -2829,12 +2829,18 @@
     let pendingPurchase = null;
 
     const META_PIXEL_ID = '1466657702229112';
+    const metaSent = new Map();
 
     function trackMeta(event, params) {
       params = params || {};
+      const key = event + '|' + (params.content_name || '') + '|' + (params.value || '');
+      const last = metaSent.get(key) || 0;
+      if (Date.now() - last < 8000) return;
+      metaSent.set(key, Date.now());
       try {
         if (typeof fbq === 'function') {
           fbq('trackSingle', META_PIXEL_ID, event, params);
+          return;
         }
       } catch (e) {}
       try {
@@ -2845,8 +2851,7 @@
           dl: location.href,
           rl: document.referrer || '',
           if: 'false',
-          ts: String(Date.now()),
-          cd: JSON.stringify(params)
+          ts: String(Date.now())
         });
         if (params.value != null) query.set('cd[value]', String(params.value));
         if (params.currency) query.set('cd[currency]', params.currency);
@@ -2956,7 +2961,6 @@
       try {
         const data = await criarPagamentoS6X('pix');
         if (!data || !data.pix) return;
-        trackMeta('InitiateCheckout', checkoutEventParams());
         trackMeta('AddPaymentInfo', checkoutEventParams());
         document.getElementById('checkoutForm').style.display = 'none';
         document.getElementById('pixResult').style.display = 'block';
