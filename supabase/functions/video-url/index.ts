@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
       'fverlene.souza@hotmail.com': ['O CEO que Sentiu Minha Gravidez'],
       'aurifbarbosa@gmail.com': ['Ele Devia Tudo a Mim'],
       'willgabi24@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
+      'koalagamepls@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
     }
     const isAdmin = user.email === 'admin@topdoramas.com' || user.user_metadata?.role === 'admin'
     const isVipUser = isAdmin || user.user_metadata?.vip === true || user.email === 'gabrieltanajura@gmail.com'
