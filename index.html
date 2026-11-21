@@ -1093,6 +1093,10 @@
           <label>E-mail</label>
           <input type="email" id="buyerEmail" placeholder="seu@email.com" required>
         </div>
+        <div class="form-group" style="text-align:left;">
+          <label>Celular</label>
+          <input type="tel" id="buyerPhone" placeholder="(11) 99999-9999" inputmode="numeric" required>
+        </div>
         <button class="submit-btn" id="gerarPixBtn" style="margin-top:0.5rem;">Gerar PIX</button>
       </div>
 
@@ -2720,6 +2724,7 @@
     async function criarPagamentoS6X(method) {
       const name = document.getElementById('buyerName').value.trim();
       const email = document.getElementById('buyerEmail').value.trim().toLowerCase();
+      const phone = document.getElementById('buyerPhone').value.replace(/\D/g, '');
       if (!name || name.length < 3) {
         alert('Digite o nome completo');
         return null;
@@ -2728,15 +2733,19 @@
         alert('Digite um e-mail válido');
         return null;
       }
+      if (phone.length < 10 || phone.length > 13) {
+        alert('Digite um celular válido com DDD');
+        return null;
+      }
 
       const amount = Number((window.vipCheckoutPlan ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(cart.length || 1)).toFixed(2));
       const body = {
         amount,
-        customer: { name, email },
+        customer: { name, email, phone, cellphone: phone },
         description: (currentPurchaseTitle || 'TopDoramas').slice(0, 120),
         product: { name: (currentPurchaseTitle || 'TopDoramas').slice(0, 80) },
         order_reference: currentPurchaseTitle || 'TopDoramas',
-        metadata: { dorama_title: currentPurchaseTitle || 'TopDoramas' },
+        metadata: { dorama_title: currentPurchaseTitle || 'TopDoramas', phone },
         payment_method: method
       };
       if (method === 'card') {
