@@ -1643,6 +1643,14 @@
       }
       details.append(poster, info);
       page.append(back, details);
+      const priceCard = document.getElementById('shortDramaPromo')?.cloneNode(true);
+      if (priceCard) {
+        priceCard.id = 'novelinhaPriceCard';
+        priceCard.style.display = 'block';
+        priceCard.style.marginTop = '1rem';
+        priceCard.querySelector('button')?.remove();
+        page.appendChild(priceCard);
+      }
       if (item.episodes && item.episodes.length) {
         const episodes = document.createElement('section');
         episodes.className = 'novelinha-episodes';
