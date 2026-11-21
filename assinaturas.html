@@ -31,6 +31,33 @@
     .plan-note{text-align:center;color:var(--muted);font-size:.82rem;margin:22px 0 0}
     @media(max-width:850px){.plans{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:480px){main{padding:32px 16px 52px}.plans{gap:10px}.plan{padding:16px;min-height:250px}.plan-price{font-size:1.65rem}}
+      @media(max-width:600px){
+      header{height:58px;padding:0 14px;gap:10px}
+      .brand{font-size:.9rem;letter-spacing:.04em}
+      .back{font-size:.78rem;white-space:nowrap}
+      main{padding:30px 14px 48px}
+      .intro{margin-bottom:22px}
+      h1{font-size:2.15rem}
+      .intro p{font-size:.92rem}
+      .plans{gap:9px}
+      .plan{min-height:0;padding:14px;border-radius:14px}
+      .plan-name{font-size:.92rem}
+      .plan-price{font-size:1.48rem;margin:10px 0 2px}
+      .period{font-size:.76rem}
+      .benefits{font-size:.76rem;margin:12px 0}
+      .benefits li{margin:.35rem 0}
+      .choose{font-size:.82rem;padding:.65rem .45rem}
+      .plan-note{font-size:.76rem;line-height:1.5;margin-top:18px}
+    }
+    @media(max-width:360px){
+      .plans{grid-template-columns:1fr}
+      .plan{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px}
+      .plan-name,.period,.benefits{grid-column:1}
+      .plan-price{grid-column:2;grid-row:1/3;font-size:1.35rem;margin:0;white-space:nowrap}
+      .benefits{margin:8px 0}
+      .choose{grid-column:1/-1}
+    }
+
   </style>
 </head>
 <body>
