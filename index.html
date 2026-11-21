@@ -2158,6 +2158,10 @@
       const allowedSources = ['loja', 'doramas', 'movies', 'series', 'animes'];
       if (!allowedSources.includes(source)) source = 'loja';
       vodRequestVersion++;
+      const detailPage = document.getElementById('novelinhaPage');
+      const catalogPage = document.getElementById('catalogo');
+      if (detailPage) detailPage.hidden = true;
+      if (catalogPage) catalogPage.hidden = false;
       vodSource = source;
       try { sessionStorage.setItem('topdoramas_catalog', source); } catch (e) {}
       const catalogHeading = document.getElementById('catalogHeading');
