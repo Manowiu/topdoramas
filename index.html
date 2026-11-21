@@ -3395,6 +3395,7 @@
       };
       const metadataVip = session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com';
       const previousVip = !!window.isVip;
+      let accessUpdated = false;
       const { data } = await supabaseClient
         .from('purchases')
         .select('dorama_title, created_at')
@@ -3414,7 +3415,7 @@
             }
           });
         });
-        if (changed) saveLibrary(userId, library);
+        if (changed) { saveLibrary(userId, library); accessUpdated = true; }
         if (changed && vodSource === 'loja') renderDoramas(currentFilter);
       }
       const extra = paidOverrides[(email || '').toLowerCase()] || [];
@@ -3430,11 +3431,23 @@
         });
         if (changed) {
           saveLibrary(userId, library);
+          accessUpdated = true;
           if (vodSource === 'loja') renderDoramas(currentFilter);
         }
       }
-      if (previousVip !== !!window.isVip && vodSource === 'loja') renderDoramas(currentFilter);
+      if (previousVip !== !!window.isVip) {
+        accessUpdated = true;
+        if (vodSource === 'loja') renderDoramas(currentFilter);
+      }
       updateVipNav();
+      if (accessUpdated && vodSource === 'loja') {
+        const activeTitle = new URLSearchParams(window.location.search).get('novelinha') || new URLSearchParams(window.location.search).get('dorama');
+        if (activeTitle) {
+          const slug = normalizeSearchText(activeTitle.replace(/[-_]+/g, ' '));
+          const activeItem = doramas.find(d => normalizeSearchText(d.title) === slug || normalizeSearchText(d.title).includes(slug) || slug.includes(normalizeSearchText(d.title)));
+          if (activeItem) openNovelinhaPage(activeItem.title, false);
+        }
+      }
     }
 
     // Roda a sincronização ao carregar e a cada 15s
