@@ -1914,7 +1914,7 @@
         return false;
       }
       const isAdmin = session.user.email === 'admin@topdoramas.com' || session.user.user_metadata?.role === 'admin';
-      const isVipUser = isAdmin || session.user.user_metadata?.vip === true || session.user.email === 'gabrieltanajura@gmail.com';
+      const isVipUser = isAdmin || session.user.user_metadata?.vip === true || session.user.email === 'gabrieltanajura@gmail.com' || session.user.email === 'taniaapdobem@gmail.com';
       if (isVipUser) { window.isVip = true; updateVipNav(); return true; }
       const { data } = await supabaseClient
         .from('purchases')
@@ -3459,7 +3459,7 @@
         'willgabi24@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
         'koalagamepls@gmail.com': ['O CEO que Sentiu Minha Gravidez']
       };
-      const metadataVip = session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com';
+      const metadataVip = session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com' || email === 'taniaapdobem@gmail.com';
       const previousVip = !!window.isVip;
       let accessUpdated = false;
       const { data } = await supabaseClient
