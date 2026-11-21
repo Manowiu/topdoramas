@@ -1680,6 +1680,8 @@
         vipCard.id = 'novelinhaVipPromo';
         vipCard.style.display = 'block';
         vipCard.style.marginTop = '1rem';
+        const plansButton = vipCard.querySelector('button');
+        if (plansButton) plansButton.onclick = () => { window.location.href = 'assinaturas.html'; };
         page.appendChild(vipCard);
       }
       if (item.episodes && item.episodes.length) {
