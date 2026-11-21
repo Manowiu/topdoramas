@@ -1648,8 +1648,27 @@
         priceCard.id = 'novelinhaPriceCard';
         priceCard.style.display = 'block';
         priceCard.style.marginTop = '1rem';
-        priceCard.querySelector('button')?.remove();
+        const titlesButton = priceCard.querySelector('button');
+        if (titlesButton) {
+          titlesButton.onclick = () => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('novelinha');
+            url.searchParams.set('catalog', 'loja');
+            window.history.pushState({ catalog: 'loja' }, '', url.pathname + url.search + url.hash);
+            page.hidden = true;
+            catalog.hidden = false;
+            selectVodSource('loja', false);
+            document.getElementById('grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          };
+        }
         page.appendChild(priceCard);
+      }
+      const vipCard = document.getElementById('shortDramaVipPromo')?.cloneNode(true);
+      if (vipCard) {
+        vipCard.id = 'novelinhaVipPromo';
+        vipCard.style.display = 'block';
+        vipCard.style.marginTop = '1rem';
+        page.appendChild(vipCard);
       }
       if (item.episodes && item.episodes.length) {
         const episodes = document.createElement('section');
