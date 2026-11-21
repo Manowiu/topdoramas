@@ -7,7 +7,42 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const S6X_WEBHOOK_SECRET = Deno.env.get('S6X_WEBHOOK_SECRET') || ''
 
+const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') || '1466657702229112'
+const META_ACCESS_TOKEN = Deno.env.get('META_ACCESS_TOKEN') || ''
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+async function sha256(value: string) {
+  const data = new TextEncoder().encode(value.trim().toLowerCase())
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function sendMetaPurchase(email: string, titles: string[], transactionId: string, amount: number) {
+  if (!META_ACCESS_TOKEN) return
+  const userData: Record<string, string[]> = {}
+  if (email) userData.em = [await sha256(email)]
+  await fetch(`https://graph.facebook.com/v21.0/${META_PIXEL_ID}/events?access_token=${META_ACCESS_TOKEN}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: [{
+        event_name: 'Purchase',
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: transactionId || `td-${Date.now()}`,
+        action_source: 'website',
+        event_source_url: 'https://topdoramas.shop',
+        user_data: userData,
+        custom_data: {
+          currency: 'BRL',
+          value: amount || 0,
+          content_ids: titles,
+          content_type: 'product',
+          num_items: titles.length || 1
+        }
+      }]
+    })
+  })
+}
 
 function verifySignature(payload: string, signature: string | null, secret: string): boolean {
   if (!secret || !signature) return true // se não configurou secret, aceita (só para teste)
@@ -80,6 +115,9 @@ Deno.serve(async (req) => {
     console.error('DB error:', error)
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
+
+  const amount = Number(payload.amount || payload.data?.amount || payload.value || 0)
+  await sendMetaPurchase(customerEmail, titles, String(transactionId || ''), amount)
 
   return new Response(JSON.stringify({ success: true, dorama: orderRef }), { status: 200 })
 })

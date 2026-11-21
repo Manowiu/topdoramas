@@ -2828,19 +2828,45 @@
     let currentPurchaseTitle = null;
     let pendingPurchase = null;
 
+    const META_PIXEL_ID = '1466657702229112';
+
     function trackMeta(event, params) {
-      if (typeof fbq === 'function') fbq('track', event, params);
+      params = params || {};
+      try {
+        if (typeof fbq === 'function') {
+          fbq('trackSingle', META_PIXEL_ID, event, params);
+        }
+      } catch (e) {}
+      try {
+        const img = new Image();
+        const query = new URLSearchParams({
+          id: META_PIXEL_ID,
+          ev: event,
+          dl: location.href,
+          rl: document.referrer || '',
+          if: 'false',
+          ts: String(Date.now()),
+          cd: JSON.stringify(params)
+        });
+        if (params.value != null) query.set('cd[value]', String(params.value));
+        if (params.currency) query.set('cd[currency]', params.currency);
+        img.src = 'https://www.facebook.com/tr/?' + query.toString();
+      } catch (e) {}
     }
 
     function checkoutEventParams() {
       const titles = (currentPurchaseTitle || cart.join(', ')).split(', ').filter(Boolean);
       const qty = titles.length || cart.length || 1;
+      const value = window.vipCheckoutPlan && VIP_PLANS[window.vipCheckoutPlan]
+        ? VIP_PLANS[window.vipCheckoutPlan].price
+        : calcPrice(qty);
       return {
-        value: Number(calcPrice(qty).toFixed(2)),
+        value: Number(Number(value).toFixed(2)),
         currency: 'BRL',
         content_type: 'product',
-        content_ids: titles,
-        contents: titles.map(id => ({ id, quantity: 1 })),
+        content_ids: titles.length ? titles : ['topdoramas'],
+        content_name: titles.join(', ') || 'TopDoramas',
+        contents: (titles.length ? titles : ['topdoramas']).map(id => ({ id, quantity: 1 })),
         num_items: qty
       };
     }
@@ -2930,6 +2956,8 @@
       try {
         const data = await criarPagamentoS6X('pix');
         if (!data || !data.pix) return;
+        trackMeta('InitiateCheckout', checkoutEventParams());
+        trackMeta('AddPaymentInfo', checkoutEventParams());
         document.getElementById('checkoutForm').style.display = 'none';
         document.getElementById('pixResult').style.display = 'block';
         if (data.pix.qr_code_base64) {
