@@ -2306,19 +2306,30 @@
       return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     }
 
+    async function fetchJsonWithTimeout(url, timeoutMs = 8000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        return await response.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     async function getAllMovieCatalogItems() {
       if (allMovieItemsCache) return allMovieItemsCache;
       if (allMovieItemsPromise) return allMovieItemsPromise;
       allMovieItemsPromise = (async () => {
         const firstUrl = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=1`;
-        const firstJson = await (await fetch(firstUrl)).json();
+        const firstJson = await fetchJsonWithTimeout(firstUrl);
         const all = [...(firstJson.data || [])];
-        const totalPages = Math.max(1, Number(firstJson.pagination?.total_pages) || 1);
-        for (let start = 2; start <= totalPages; start += 6) {
-          const pages = Array.from({ length: Math.min(6, totalPages - start + 1) }, (_, i) => start + i);
+        const totalPages = Math.min(8, Math.max(1, Number(firstJson.pagination?.total_pages) || 1));
+        for (let start = 2; start <= totalPages; start += 3) {
+          const pages = Array.from({ length: Math.min(3, totalPages - start + 1) }, (_, i) => start + i);
           const batches = await Promise.all(pages.map(async page => {
             const url = `https://nixplay.lat/api/catalog.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&type=movies&page=${page}`;
-            const json = await (await fetch(url)).json();
+            const json = await fetchJsonWithTimeout(url);
             return json.data || [];
           }));
           batches.forEach(items => all.push(...items));
@@ -2380,18 +2391,21 @@
       }
       const controls = document.getElementById('catalogControls');
       if (controls) controls.style.display = 'none';
-      grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Buscando em todos os catálogos...</p>';
+      const localMatches = [];
+      doramas.forEach(item => {
+        if (normalizeSearchText(item.title).includes(query)) localMatches.push({ item, source: 'loja' });
+      });
+      renderGlobalSearchResults(localMatches, query);
+      if (!localMatches.length) grid.innerHTML = '<p style="color:#aaa;padding:1rem;">Buscando em todos os catálogos...</p>';
       document.getElementById('vodMoreWrap').style.display = 'none';
       try {
-        const [seriesCatalog, movieCatalog] = await Promise.all([ensureNixSeriesCatalog(), getAllMovieCatalogItems()]);
+        const [seriesCatalog, movieCatalog] = await Promise.all([
+          Promise.race([ensureNixSeriesCatalog(), new Promise(resolve => setTimeout(() => resolve([]), 8000))]),
+          Promise.race([getAllMovieCatalogItems().catch(() => []), new Promise(resolve => setTimeout(() => resolve([]), 8000))])
+        ]);
         if (requestVersion !== globalSearchVersion) return;
-        const needle = query;
-        const matches = [];
-        const addMatches = (items, source) => items.forEach(item => {
-          const title = item.title || item.name || '';
-          if (normalizeSearchText(title).includes(needle)) matches.push({ item, source });
-        });
-        addMatches(doramas, 'loja');
+        const matches = [...localMatches];
+        const seen = new Set(localMatches.map(match => normalizeSearchText(match.item.title)));
         seriesCatalog.filter(item => seriesBucket(item) !== 'novelinhas').forEach(raw => {
           const bucket = seriesBucket(raw);
           const item = {
@@ -2400,13 +2414,24 @@
             year: (raw.releaseDate || '').slice(0, 4), synopsis: raw.plot || '',
             genres: raw.genre || bucket, type: 'serie', series_id: raw.series_id
           };
-          if (normalizeSearchText(item.title).includes(needle)) matches.push({ item, source: bucket });
+          const key = normalizeSearchText(item.title);
+          if (key.includes(query) && !seen.has(key)) {
+            seen.add(key);
+            matches.push({ item, source: bucket });
+          }
         });
-        addMatches(movieCatalog, 'movies');
+        (movieCatalog || []).forEach(item => {
+          const title = item.title || item.name || '';
+          const key = normalizeSearchText(title);
+          if (key.includes(query) && !seen.has(key)) {
+            seen.add(key);
+            matches.push({ item, source: 'movies' });
+          }
+        });
         matches.sort((a, b) => String(a.item.title || a.item.name || '').localeCompare(String(b.item.title || b.item.name || ''), 'pt-BR'));
         if (requestVersion === globalSearchVersion) renderGlobalSearchResults(matches.slice(0, 96), query);
       } catch (error) {
-        if (requestVersion === globalSearchVersion) grid.innerHTML = '<p style="color:#f88;padding:1rem;">Não foi possível pesquisar todos os catálogos agora. Tente novamente.</p>';
+        if (requestVersion === globalSearchVersion && !localMatches.length) grid.innerHTML = '<p style="color:#f88;padding:1rem;">Não foi possível pesquisar todos os catálogos agora. Tente novamente.</p>';
         console.error('Erro na busca global:', error);
       }
     }
