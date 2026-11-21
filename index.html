@@ -940,21 +940,9 @@
           <h2 style="font-size:clamp(1.45rem,4vw,2rem);line-height:1.1;margin:.65rem 0 .4rem;">Quer acesso ao catálogo completo?</h2>
           <p style="font-size:.9rem;color:var(--muted);">Com o VIP, assista a filmes e séries para assinantes. Escolha entre planos semanal, mensal, semestral ou vitalício.</p>
         </div>
-        <button type="button" onclick="document.getElementById('vipModal').classList.add('open')" style="background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;border-radius:10px;padding:.7rem 1rem;font-weight:800;cursor:pointer;">Ver planos VIP</button>
+        <button type="button" onclick="window.location.href='assinaturas.html'" style="background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;border:none;border-radius:10px;padding:.7rem 1rem;font-weight:800;cursor:pointer;">Ver planos VIP</button>
       </div>
     </section>
-    <section id="subscriptionPrices" aria-label="Preços dos planos VIP" style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.2rem;margin-bottom:1rem;color:var(--text);">
-      <span style="display:inline-block;background:#222;color:var(--yellow);border-radius:999px;padding:.3rem .7rem;font-size:.65rem;font-weight:800;letter-spacing:.12em;">PLANOS VIP</span>
-      <h2 style="font-size:clamp(1.45rem,4vw,2rem);line-height:1.1;margin:.65rem 0 .4rem;">Preços da assinatura</h2>
-      <p style="font-size:.9rem;color:var(--muted);margin-bottom:1rem;">Escolha seu plano para acessar os catálogos de filmes e séries.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.65rem;">
-        <button type="button" onclick="selectSubscriptionPlan('semanal')" style="text-align:left;background:var(--card-hover);border:1px solid var(--border);border-radius:12px;padding:.85rem;color:var(--text);font:inherit;cursor:pointer;">Semanal<strong style="display:block;color:var(--yellow);font-size:1.15rem;margin:.25rem 0;">R$ 9,90</strong><small style="color:var(--muted);">7 dias</small></button>
-        <button type="button" onclick="selectSubscriptionPlan('mensal')" style="text-align:left;background:var(--card-hover);border:1px solid var(--yellow);border-radius:12px;padding:.85rem;color:var(--text);font:inherit;cursor:pointer;">Mensal<strong style="display:block;color:var(--yellow);font-size:1.15rem;margin:.25rem 0;">R$ 19,90</strong><small style="color:var(--muted);">30 dias</small></button>
-        <button type="button" onclick="selectSubscriptionPlan('semestral')" style="text-align:left;background:var(--card-hover);border:1px solid var(--border);border-radius:12px;padding:.85rem;color:var(--text);font:inherit;cursor:pointer;">Semestral<strong style="display:block;color:var(--yellow);font-size:1.15rem;margin:.25rem 0;">R$ 89,90</strong><small style="color:var(--muted);">180 dias</small></button>
-        <button type="button" onclick="selectSubscriptionPlan('vitalicio')" style="text-align:left;background:var(--card-hover);border:1px solid var(--border);border-radius:12px;padding:.85rem;color:var(--text);font:inherit;cursor:pointer;">Vitalício<strong style="display:block;color:var(--yellow);font-size:1.15rem;margin:.25rem 0;">R$ 199,90</strong><small style="color:var(--muted);">Acesso permanente</small></button>
-      </div>
-    </section>
-
       <div class="catalog-section-heading" id="catalogSectionHeading"><h2 id="catalogHeading">Novelinhas Nacionais e Internacionais</h2><span>DESTAQUES</span></div>
 <div class="catalog-controls" id="catalogControls">
         <label>Gênero
@@ -2485,7 +2473,7 @@
       document.getElementById('heroPlay').onclick = () => openModal(featured);
     }
     const navVipButton = document.getElementById('navVipButton');
-    if (navVipButton) navVipButton.onclick = () => document.getElementById('vipModal').classList.add('open');
+    if (navVipButton) navVipButton.onclick = () => { window.location.href = 'assinaturas.html'; };
     const navLibrary = document.getElementById('navLibrary');
     if (navLibrary) navLibrary.onclick = () => {
       const btn = document.getElementById('myDoramasBtn');
@@ -2627,6 +2615,8 @@
       const initialItem = doramas.find(d => normalizeSearchText(d.title) === normalizedSlug || normalizeSearchText(d.title).includes(normalizedSlug) || normalizedSlug.includes(normalizeSearchText(d.title)));
       if (initialItem) openNovelinhaPage(initialItem.title, false);
     }
+    const requestedVipPlan = initialParams.get('vipPlan');
+    if (requestedVipPlan && VIP_PLANS[requestedVipPlan]) window.selectSubscriptionPlan(requestedVipPlan);
 
     // ========== LGPD / PRIVACIDADE ==========
     // Storage seguro
