@@ -69,14 +69,20 @@ Deno.serve(async (req) => {
       .eq('email', user.email)
       .eq('status', 'paid')
 
+    const paidOverrides: Record<string, string[]> = {
+      'fverlene.souza@hotmail.com': ['O CEO que Sentiu Minha Gravidez'],
+      'aurifbarbosa@gmail.com': ['Ele Devia Tudo a Mim'],
+      'willgabi24@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
+    }
     const isAdmin = user.email === 'admin@topdoramas.com' || user.user_metadata?.role === 'admin'
     const isVipUser = isAdmin || user.user_metadata?.vip === true || user.email === 'gabrieltanajura@gmail.com'
+    const hasOverride = (paidOverrides[(user.email || '').toLowerCase()] || []).includes(title)
     const hasVipPurchase = purchase?.some(p => (p.dorama_title || '').startsWith('Assinatura VIP'))
     const hasTitle = purchase?.some(p => {
       const titles = String(p.dorama_title || '').split(', ').map(t => t.trim());
       return titles.includes(title);
     })
-    if (!hasTitle && !hasVipPurchase && !isVipUser) {
+    if (!hasTitle && !hasVipPurchase && !isVipUser && !hasOverride) {
       return new Response(JSON.stringify({ error: 'Você não comprou este dorama' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })

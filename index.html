@@ -3236,6 +3236,11 @@
       if (!session) return;
       const email = session.user.email;
       window.currentUserId = session.user.id;
+      const paidOverrides = {
+        'fverlene.souza@hotmail.com': ['O CEO que Sentiu Minha Gravidez'],
+        'aurifbarbosa@gmail.com': ['Ele Devia Tudo a Mim'],
+        'willgabi24@gmail.com': ['O CEO que Sentiu Minha Gravidez']
+      };
       const metadataVip = session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com';
       const previousVip = !!window.isVip;
       const { data } = await supabaseClient
@@ -3259,6 +3264,22 @@
         });
         if (changed) saveLibrary(userId, library);
         if (changed && vodSource === 'loja') renderDoramas(currentFilter);
+      }
+      const extra = paidOverrides[(email || '').toLowerCase()] || [];
+      if (extra.length) {
+        const userId = session.user.id;
+        const library = getLibrary(userId);
+        let changed = false;
+        extra.forEach(title => {
+          if (!library.includes(title)) {
+            library.push(title);
+            changed = true;
+          }
+        });
+        if (changed) {
+          saveLibrary(userId, library);
+          if (vodSource === 'loja') renderDoramas(currentFilter);
+        }
       }
       if (previousVip !== !!window.isVip && vodSource === 'loja') renderDoramas(currentFilter);
       updateVipNav();
