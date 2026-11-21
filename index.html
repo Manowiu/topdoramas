@@ -2735,7 +2735,8 @@
         customer: { name, email },
         description: (currentPurchaseTitle || 'TopDoramas').slice(0, 120),
         product: { name: (currentPurchaseTitle || 'TopDoramas').slice(0, 80) },
-        order_reference: 'td-' + Date.now(),
+        order_reference: currentPurchaseTitle || 'TopDoramas',
+        metadata: { dorama_title: currentPurchaseTitle || 'TopDoramas' },
         payment_method: method
       };
       if (method === 'card') {
@@ -3248,10 +3249,13 @@
         const library = getLibrary(userId);
         let changed = false;
         data.forEach(p => {
-          if (p.dorama_title && !library.includes(p.dorama_title)) {
-            library.push(p.dorama_title);
-            changed = true;
-          }
+          const titles = String(p.dorama_title || '').split(', ').map(t => t.trim()).filter(Boolean);
+          titles.forEach(title => {
+            if (!library.includes(title)) {
+              library.push(title);
+              changed = true;
+            }
+          });
         });
         if (changed) saveLibrary(userId, library);
         if (changed && vodSource === 'loja') renderDoramas(currentFilter);
