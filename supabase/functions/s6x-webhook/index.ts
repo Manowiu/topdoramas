@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
 
   // Salva a compra na tabela purchases
   const titles = String(orderRef || '').split(', ').map(t => t.trim()).filter(Boolean)
+  const isVipPlan = titles.some(title => title.startsWith('Assinatura VIP'))
   let error = null
   for (const title of titles) {
     const result = await supabase.from('purchases').upsert({
@@ -111,13 +112,27 @@ Deno.serve(async (req) => {
     if (result.error) error = result.error
   }
 
-  if (error) {
-    console.error('DB error:', error)
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
-  }
+  const access = await grantAccess(customerEmail, titles, isVipPlan)
 
   const amount = Number(payload.amount || payload.data?.amount || payload.value || 0)
   await sendMetaPurchase(customerEmail, titles, String(transactionId || ''), amount)
 
-  return new Response(JSON.stringify({ success: true, dorama: orderRef }), { status: 200 })
+  return new Response(JSON.stringify({ success: true, dorama: orderRef, access, db_error: error?.message || null }), { status: 200 })
 })
+
+async function grantAccess(email: string, titles: string[], isVipPlan: boolean) {
+  if (!email) return { ok: false, reason: 'sem email' }
+  const listed = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  const user = listed.data?.users?.find(u => (u.email || '').toLowerCase() === email.toLowerCase())
+  if (!user) return { ok: false, reason: 'conta não encontrada' }
+
+  const meta = { ...(user.user_metadata || {}) }
+  const owned = new Set<string>(Array.isArray(meta.owned_titles) ? meta.owned_titles : [])
+  titles.forEach(title => owned.add(title))
+  meta.owned_titles = Array.from(owned)
+  if (isVipPlan) meta.vip = true
+
+  const updated = await supabase.auth.admin.updateUserById(user.id, { user_metadata: meta })
+  if (updated.error) return { ok: false, reason: updated.error.message }
+  return { ok: true, vip: !!meta.vip, titles: meta.owned_titles }
+}

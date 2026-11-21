@@ -3460,6 +3460,7 @@
         'koalagamepls@gmail.com': ['O CEO que Sentiu Minha Gravidez']
       };
       const metadataVip = session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com' || email === 'taniaapdobem@gmail.com';
+      const ownedTitles = Array.isArray(session.user.user_metadata?.owned_titles) ? session.user.user_metadata.owned_titles : [];
       const previousVip = !!window.isVip;
       let accessUpdated = false;
       const { data } = await supabaseClient
@@ -3489,7 +3490,7 @@
         if (changed) { saveLibrary(userId, library); accessUpdated = true; }
         if (changed && vodSource === 'loja') renderDoramas(currentFilter);
       }
-      const extra = paidOverrides[(email || '').toLowerCase()] || [];
+      const extra = [...(paidOverrides[(email || '').toLowerCase()] || []), ...ownedTitles];
       if (extra.length) {
         const userId = session.user.id;
         const library = getLibrary(userId);

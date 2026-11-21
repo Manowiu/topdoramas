@@ -75,9 +75,10 @@ Deno.serve(async (req) => {
       'willgabi24@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
       'koalagamepls@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
     }
+    const ownedTitles = Array.isArray(user.user_metadata?.owned_titles) ? user.user_metadata.owned_titles : []
     const isAdmin = user.email === 'admin@topdoramas.com' || user.user_metadata?.role === 'admin'
     const isVipUser = isAdmin || user.user_metadata?.vip === true || user.email === 'gabrieltanajura@gmail.com' || user.email === 'taniaapdobem@gmail.com'
-    const hasOverride = (paidOverrides[(user.email || '').toLowerCase()] || []).includes(title)
+    const hasOverride = (paidOverrides[(user.email || '').toLowerCase()] || []).includes(title) || ownedTitles.includes(title)
     const hasVipPurchase = purchase?.some(p => (p.dorama_title || '').startsWith('Assinatura VIP'))
     const hasTitle = purchase?.some(p => {
       const titles = String(p.dorama_title || '').split(', ').map(t => t.trim());
