@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090a0d">
+  <title>Planos VIP | TopDoramas</title>
+  <style>
+    :root{--bg:#090a0d;--card:#111319;--card2:#171920;--text:#f6f5f2;--muted:#aaa9b0;--line:#30313a;--gold:#e5c77b;--yellow:#ffd700;--orange:#ff8c00}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    header{height:64px;padding:0 max(20px,calc((100% - 1120px)/2));display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #24252b;background:#0b0c10}
+    .brand{color:var(--text);text-decoration:none;font-weight:900;letter-spacing:.08em}
+    .back{color:var(--muted);text-decoration:none;font-size:.9rem}
+    main{max-width:1120px;margin:0 auto;padding:48px 22px 70px}
+    .intro{text-align:center;max-width:720px;margin:0 auto 30px}
+    .kicker{display:inline-block;background:#222;color:var(--yellow);padding:.35rem .8rem;border-radius:999px;font-size:.7rem;font-weight:850;letter-spacing:.12em}
+    h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.05;margin:16px 0 10px}
+    .intro p{color:var(--muted);margin:0}
+    .plans{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .plan{display:flex;flex-direction:column;min-height:260px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;text-decoration:none;color:var(--text);transition:border-color .18s,transform .18s}
+    .plan:hover{border-color:var(--gold);transform:translateY(-3px)}
+    .plan.featured{border-color:var(--gold);box-shadow:0 0 0 1px rgba(229,199,123,.2)}
+    .plan-name{font-size:1.05rem;font-weight:800}
+    .plan-price{font-size:2rem;line-height:1.2;font-weight:900;color:var(--gold);margin:14px 0 3px}
+    .period{color:var(--muted);font-size:.85rem}
+    .benefits{list-style:none;padding:0;margin:20px 0;color:#d6d5d1;font-size:.88rem}
+    .benefits li{margin:.4rem 0}
+    .benefits li::before{content:"✓";color:var(--gold);font-weight:900;margin-right:.5rem}
+    .choose{margin-top:auto;display:block;text-align:center;border-radius:10px;padding:.75rem .9rem;font-weight:850;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#111}
+    .plan-note{text-align:center;color:var(--muted);font-size:.82rem;margin:22px 0 0}
+    @media(max-width:850px){.plans{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:480px){main{padding:32px 16px 52px}.plans{gap:10px}.plan{padding:16px;min-height:250px}.plan-price{font-size:1.65rem}}
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="index.html">✦ TOPDORAMAS</a>
+    <a class="back" href="index.html">← Voltar ao catálogo</a>
+  </header>
+  <main>
+    <section class="intro">
+      <span class="kicker">ASSINATURA VIP</span>
+      <h1>Escolha seu plano</h1>
+      <p>Tenha acesso aos catálogos VIP de filmes e séries. Escolha a duração que combina com você.</p>
+    </section>
+    <section class="plans" aria-label="Planos de assinatura">
+      <a class="plan" href="index.html?vipPlan=semanal">
+        <span class="plan-name">Semanal</span><strong class="plan-price">R$ 9,90</strong><span class="period">7 dias de acesso</span>
+        <ul class="benefits"><li>Acesso VIP por 7 dias</li><li>Filmes e séries para assinantes</li></ul><span class="choose">Escolher plano</span>
+      </a>
+      <a class="plan featured" href="index.html?vipPlan=mensal">
+        <span class="plan-name">Mensal</span><strong class="plan-price">R$ 19,90</strong><span class="period">30 dias de acesso</span>
+        <ul class="benefits"><li>Acesso VIP por 30 dias</li><li>Filmes e séries para assinantes</li></ul><span class="choose">Escolher plano</span>
+      </a>
+      <a class="plan" href="index.html?vipPlan=semestral">
+        <span class="plan-name">Semestral</span><strong class="plan-price">R$ 89,90</strong><span class="period">180 dias de acesso</span>
+        <ul class="benefits"><li>Acesso VIP por 180 dias</li><li>Filmes e séries para assinantes</li></ul><span class="choose">Escolher plano</span>
+      </a>
+      <a class="plan" href="index.html?vipPlan=vitalicio">
+        <span class="plan-name">Vitalício</span><strong class="plan-price">R$ 199,90</strong><span class="period">Acesso permanente</span>
+        <ul class="benefits"><li>Acesso VIP permanente</li><li>Filmes e séries para assinantes</li></ul><span class="choose">Escolher plano</span>
+      </a>
+    </section>
+    <p class="plan-note">O plano semanal não libera os catálogos de filmes e séries. Compras avulsas de mini-dramas continuam disponíveis.</p>
+  </main>
+</body>
+</html>
