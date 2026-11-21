@@ -125,6 +125,8 @@
     .novelinha-detail-overview { color:#ddd;margin:1rem 0;line-height:1.7;white-space:pre-line; }
     .novelinha-action { width:100%;max-width:360px;border:0;border-radius:10px;padding:.8rem 1rem;font:inherit;font-weight:800;cursor:pointer;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;margin-top:.5rem; }
     .novelinha-action.watch { background:linear-gradient(90deg,#16834a,#25b86a);color:#fff; }
+    .novelinha-cart-action { width:100%;max-width:360px;border:1px solid var(--yellow);border-radius:10px;padding:.75rem 1rem;font:inherit;font-weight:750;cursor:pointer;background:transparent;color:var(--yellow);margin-top:.55rem; }
+    .novelinha-cart-action.added { border-color:#555;background:#222;color:#aaa; }
     .novelinha-episodes { margin-top:1.2rem; }
     .novelinha-episode { display:flex;justify-content:space-between;align-items:center;gap:1rem;background:#171717;border:1px solid #333;border-radius:10px;padding:.75rem;margin-top:.5rem;color:#fff;cursor:pointer; }
     @media(max-width:700px){.novelinha-detail{grid-template-columns:1fr;padding:1rem}.novelinha-detail-poster{max-height:420px;max-width:300px;margin:auto}}
@@ -1640,6 +1642,17 @@
         buy.textContent = 'Comprar este mini-drama';
         buy.onclick = () => window.comprarDorama(item.title);
         info.appendChild(buy);
+        const addToCart = document.createElement('button');
+        addToCart.type = 'button';
+        addToCart.className = 'novelinha-cart-action' + (cart.includes(item.title) ? ' added' : '');
+        addToCart.textContent = cart.includes(item.title) ? '✓ No carrinho' : '+ Adicionar ao carrinho';
+        addToCart.onclick = () => {
+          if (!cart.includes(item.title)) cart.push(item.title);
+          updateCartUI();
+          addToCart.textContent = '✓ No carrinho';
+          addToCart.classList.add('added');
+        };
+        info.appendChild(addToCart);
       }
       details.append(poster, info);
       page.append(back, details);
