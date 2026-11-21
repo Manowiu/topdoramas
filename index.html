@@ -115,6 +115,19 @@
       border: 1px solid #333 !important; color: #ddd !important;
     }
     .filter-btn.active { background: #fff !important; color: #000 !important; border-color: #fff !important; }
+    #novelinhaPage { max-width:1100px;margin:0 auto;padding:1.25rem 1rem 2rem; }
+    .novelinha-back { background:transparent;border:1px solid #333;color:#ddd;border-radius:999px;padding:.55rem .9rem;font:inherit;cursor:pointer;margin-bottom:1rem; }
+    .novelinha-detail { display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:1.5rem;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.25rem; }
+    .novelinha-detail-poster { width:100%;max-height:520px;object-fit:cover;border-radius:12px;background:#111; }
+    .novelinha-detail-info h1 { font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.08;margin:.3rem 0 .7rem; }
+    .novelinha-detail-meta,.novelinha-detail-genres { display:flex;gap:.5rem;flex-wrap:wrap;color:var(--muted);margin:.7rem 0; }
+    .novelinha-detail-genres span { border:1px solid #333;border-radius:999px;padding:.25rem .65rem;font-size:.8rem; }
+    .novelinha-detail-overview { color:#ddd;margin:1rem 0;line-height:1.7;white-space:pre-line; }
+    .novelinha-action { width:100%;max-width:360px;border:0;border-radius:10px;padding:.8rem 1rem;font:inherit;font-weight:800;cursor:pointer;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;margin-top:.5rem; }
+    .novelinha-action.watch { background:linear-gradient(90deg,#16834a,#25b86a);color:#fff; }
+    .novelinha-episodes { margin-top:1.2rem; }
+    .novelinha-episode { display:flex;justify-content:space-between;align-items:center;gap:1rem;background:#171717;border:1px solid #333;border-radius:10px;padding:.75rem;margin-top:.5rem;color:#fff;cursor:pointer; }
+    @media(max-width:700px){.novelinha-detail{grid-template-columns:1fr;padding:1rem}.novelinha-detail-poster{max-height:420px;max-width:300px;margin:auto}}
     .bottom-nav {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
       display: flex; justify-content: space-around; align-items: center;
@@ -952,6 +965,8 @@
     <button class="request-btn" id="requestBtn">💬 Não achou o título? Peça aqui</button>
   </div>
 
+  <main id="novelinhaPage" hidden></main>
+
   <nav class="bottom-nav" id="bottom-nav">
     <button class="bottom-category-btn" data-src="movies" type="button" onclick="selectVodSource('movies')"><span>🎬</span><span>Filmes</span></button>
     <button class="bottom-category-btn" data-src="series" type="button" onclick="selectVodSource('series')"><span>▣</span><span>Séries</span></button>
@@ -1563,11 +1578,89 @@
         const detailsBtn = card.querySelector('.details-card-btn');
         detailsBtn.onclick = (e) => {
           e.stopPropagation();
-          openModal(item);
+          openNovelinhaPage(item.title);
         };
-        card.addEventListener('click', () => openModal(item));
+        card.addEventListener('click', () => openNovelinhaPage(item.title));
         grid.appendChild(card);
       });
+    }
+
+    function openNovelinhaPage(title, updateAddress = true) {
+      const item = doramas.find(d => d.title === title);
+      if (!item) return;
+      if (updateAddress) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('catalog', 'loja');
+        url.searchParams.set('novelinha', item.title);
+        window.history.pushState({ catalog: 'loja', novelinha: item.title }, '', url.pathname + url.search + url.hash);
+      }
+      const catalog = document.getElementById('catalogo');
+      const page = document.getElementById('novelinhaPage');
+      catalog.hidden = true;
+      page.hidden = false;
+      const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+      page.innerHTML = '';
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'novelinha-back';
+      back.textContent = '← Voltar às novelinhas';
+      back.onclick = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('novelinha');
+        url.searchParams.set('catalog', 'loja');
+        window.history.pushState({ catalog: 'loja' }, '', url.pathname + url.search + url.hash);
+        page.hidden = true;
+        catalog.hidden = false;
+        selectVodSource('loja', false);
+      };
+      const details = document.createElement('section');
+      details.className = 'novelinha-detail';
+      const poster = document.createElement('img');
+      poster.className = 'novelinha-detail-poster';
+      poster.src = item.poster || '';
+      poster.alt = item.title;
+      poster.onerror = () => { poster.src = 'https://via.placeholder.com/500x750/111111/FFD700?text=TopDoramas'; };
+      const info = document.createElement('div');
+      info.className = 'novelinha-detail-info';
+      info.innerHTML = `
+        <span class="series-badge">MINI-DRAMA</span>
+        <h1>${esc(item.title)}</h1>
+        <div class="novelinha-detail-meta"><span>${esc(item.year || '')}</span><span>★ ${esc(item.rating || '')}</span><span>${esc(item.duration || 'Mini-drama')}</span></div>
+        <div class="novelinha-detail-genres">${(item.genres || []).map(g => '<span>' + esc(g) + '</span>').join('')}</div>
+        <p class="novelinha-detail-overview">${esc(item.overview || '')}</p>`;
+      if (canWatchNovelinha(item)) {
+        const watch = document.createElement('button');
+        watch.className = 'novelinha-action watch';
+        watch.textContent = '▶ Assistir agora';
+        watch.onclick = () => window.assistirDorama(item.title);
+        info.appendChild(watch);
+      } else {
+        const buy = document.createElement('button');
+        buy.className = 'novelinha-action';
+        buy.textContent = 'Comprar este mini-drama';
+        buy.onclick = () => window.comprarDorama(item.title);
+        info.appendChild(buy);
+      }
+      details.append(poster, info);
+      page.append(back, details);
+      if (item.episodes && item.episodes.length) {
+        const episodes = document.createElement('section');
+        episodes.className = 'novelinha-episodes';
+        episodes.innerHTML = '<h2>Episódios</h2>';
+        item.episodes.forEach((ep, index) => {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'novelinha-episode';
+          row.innerHTML = '<span>' + esc(ep.title || 'Episódio ' + (index + 1)) + '</span><span>▶</span>';
+          row.onclick = () => {
+            if (!canWatchNovelinha(item)) window.comprarDorama(item.title);
+            else window.assistirEpisodio(item.title, index);
+          };
+          episodes.appendChild(row);
+        });
+        page.appendChild(episodes);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function openModal(item) {
@@ -2120,8 +2213,11 @@
       });
     });
     window.addEventListener('popstate', () => {
-      const source = new URLSearchParams(window.location.search).get('catalog') || 'loja';
+      const params = new URLSearchParams(window.location.search);
+      const source = params.get('catalog') || 'loja';
       selectVodSource(source, false);
+      const novelinha = params.get('novelinha');
+      if (source === 'loja' && novelinha) openNovelinhaPage(novelinha, false);
     });
 
     let vodMoreLoading = false;
@@ -2206,7 +2302,7 @@
           <span class="series-badge">${source === 'loja' ? 'NOVELINHA' : source === 'doramas' ? 'DORAMA' : source === 'movies' ? 'FILME' : source === 'animes' ? 'ANIME' : 'SÉRIE'}</span>
           <img src="${item.poster || item.cover || ''}" alt="" onerror="this.src='https://via.placeholder.com/500x750/111111/FFD700?text=TopDoramas'">
           <div class="card-info"><h3>${item.title || item.name || ''}</h3><div class="meta"><span>${item.year || item.releaseDate || ''}</span></div></div>`;
-        card.onclick = () => source === 'loja' ? openModal(item) : openVod(item);
+        card.onclick = () => source === 'loja' ? openNovelinhaPage(item.title) : openVod(item);
         grid.appendChild(card);
       });
       document.getElementById('vodMoreWrap').style.display = 'none';
@@ -2438,6 +2534,8 @@
     initialCatalog = initialCatalog || 'loja';
     selectVodSource(initialCatalog, false);
     updateCartUI();
+    const initialNovelinha = new URLSearchParams(window.location.search).get('novelinha');
+    if (initialCatalog === 'loja' && initialNovelinha) openNovelinhaPage(initialNovelinha, false);
 
     // ========== LGPD / PRIVACIDADE ==========
     // Storage seguro
