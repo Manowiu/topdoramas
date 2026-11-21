@@ -2831,15 +2831,15 @@
     const META_PIXEL_ID = '1466657702229112';
     const metaSent = new Map();
 
-    function trackMeta(event, params) {
+    function trackMeta(event, params, eventId) {
       params = params || {};
-      const key = event + '|' + (params.content_name || '') + '|' + (params.value || '');
+      const key = event + '|' + (eventId || params.content_name || '') + '|' + (params.value || '');
       const last = metaSent.get(key) || 0;
-      if (Date.now() - last < 8000) return;
+      if (Date.now() - last < 60000) return;
       metaSent.set(key, Date.now());
       try {
         if (typeof fbq === 'function') {
-          fbq('trackSingle', META_PIXEL_ID, event, params);
+          fbq('trackSingle', META_PIXEL_ID, event, params, eventId ? { eventID: eventId } : undefined);
           return;
         }
       } catch (e) {}
@@ -2855,8 +2855,27 @@
         });
         if (params.value != null) query.set('cd[value]', String(params.value));
         if (params.currency) query.set('cd[currency]', params.currency);
+        if (eventId) query.set('eid', eventId);
         img.src = 'https://www.facebook.com/tr/?' + query.toString();
       } catch (e) {}
+    }
+
+    function sendPurchaseEvent(purchase) {
+      const title = purchase.dorama_title || purchase.content_name || 'TopDoramas';
+      const eventId = 'purchase-' + (purchase.id || purchase.created_at || title);
+      const sent = safeGetJSON('meta_purchase_sent', []);
+      if (sent.includes(eventId)) return;
+      sent.push(eventId);
+      safeSetJSON('meta_purchase_sent', sent.slice(-100));
+      trackMeta('Purchase', {
+        value: Number(purchase.value || (window.vipCheckoutPlan && VIP_PLANS[window.vipCheckoutPlan] ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(1))),
+        currency: 'BRL',
+        content_type: 'product',
+        content_ids: [title],
+        content_name: title,
+        contents: [{ id: title, quantity: 1 }],
+        num_items: 1
+      }, eventId);
     }
 
     function checkoutEventParams() {
@@ -2970,27 +2989,22 @@
         document.getElementById('pixCopy').value = data.pix.copy_paste || data.pix.qr_code || '';
         document.getElementById('pixStatus').textContent = 'Aguardando pagamento... (atualiza automaticamente)';
         pendingPurchase = checkoutEventParams();
+        safeSetJSON('pending_meta_purchase', { ...pendingPurchase, title: currentPurchaseTitle, startedAt: Date.now() });
         if (pixCheckInterval) clearInterval(pixCheckInterval);
         pixCheckInterval = setInterval(async () => {
-          await syncPurchasesFromSupabase();
-          const userId = await getCurrentUserId();
-          const library = getLibrary(userId);
-          const titles = (currentPurchaseTitle || '').split(', ').filter(Boolean);
-          const paid = titles.length && titles.every(t => library.includes(t) || library.includes(currentPurchaseTitle));
-          if (paid) {
-            clearInterval(pixCheckInterval);
-            pixCheckInterval = null;
-            if (pendingPurchase) {
-              trackMeta('Purchase', pendingPurchase);
-              pendingPurchase = null;
-            }
-            document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
-            document.getElementById('pixStatus').style.color = '#2ecc71';
-            window.vipCheckoutPlan = null;
-            cart = [];
-            updateCartUI();
-            setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
-          }
+          const confirmed = await findConfirmedPurchase();
+          if (!confirmed) return;
+          clearInterval(pixCheckInterval);
+          pixCheckInterval = null;
+          sendPurchaseEvent({ ...confirmed, value: pendingPurchase?.value });
+          pendingPurchase = null;
+          safeSetJSON('pending_meta_purchase', null);
+          document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
+          document.getElementById('pixStatus').style.color = '#2ecc71';
+          window.vipCheckoutPlan = null;
+          cart = [];
+          updateCartUI();
+          setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
         }, 5000);
       } finally {
         pixInFlight = false;
@@ -3412,6 +3426,26 @@
     setupAuthButton();
     setupCartButton();
 
+    async function findConfirmedPurchase() {
+      if (!supabaseClient) return null;
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) return null;
+      const { data } = await supabaseClient
+        .from('purchases')
+        .select('id, dorama_title, created_at')
+        .eq('email', session.user.email)
+        .eq('status', 'paid');
+      const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
+      const pending = safeGetJSON('pending_meta_purchase', null);
+      const startedAt = pending?.startedAt || 0;
+      return (data || []).find(p => {
+        const saved = String(p.dorama_title || '');
+        const matchesTitle = !titles.length || titles.some(t => saved === t || saved.includes(t) || t.includes(saved));
+        const recent = startedAt && Date.parse(p.created_at || '') >= startedAt - 60000;
+        return matchesTitle && (!startedAt || recent || saved === currentPurchaseTitle);
+      }) || null;
+    }
+
     // Verifica compras confirmadas via webhook (tabela purchases)
     async function syncPurchasesFromSupabase() {
       if (!supabaseClient) return;
@@ -3430,10 +3464,15 @@
       let accessUpdated = false;
       const { data } = await supabaseClient
         .from('purchases')
-        .select('dorama_title, created_at')
+        .select('id, dorama_title, created_at')
         .eq('email', email)
         .eq('status', 'paid');
       window.isVip = metadataVip || hasActiveVip(data || []);
+      const recentCutoff = Date.now() - 48 * 60 * 60 * 1000;
+      (data || []).forEach(p => {
+        const created = Date.parse(p.created_at || '');
+        if (Number.isFinite(created) && created >= recentCutoff) sendPurchaseEvent(p);
+      });
       if (data && data.length) {
         const userId = session.user.id;
         const library = getLibrary(userId);
