@@ -126,6 +126,15 @@
     .novelinha-action { width:100%;max-width:360px;border:0;border-radius:10px;padding:.8rem 1rem;font:inherit;font-weight:800;cursor:pointer;background:linear-gradient(90deg,var(--yellow),var(--orange));color:#000;margin-top:.5rem; }
     .novelinha-action.watch { background:linear-gradient(90deg,#16834a,#25b86a);color:#fff; }
     .novelinha-cart-action { width:100%;max-width:360px;border:1px solid var(--yellow);border-radius:10px;padding:.75rem 1rem;font:inherit;font-weight:750;cursor:pointer;background:transparent;color:var(--yellow);margin-top:.55rem; }
+    .novelinha-subscriptions { margin-top:1rem;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.2rem;color:var(--text); }
+    .novelinha-subscriptions h2 { font-size:1.35rem;margin-bottom:.25rem; }
+    .novelinha-subscriptions > p { color:var(--muted);font-size:.9rem;margin-bottom:.9rem; }
+    .novelinha-subscription-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem; }
+    .novelinha-subscription-plan { background:var(--card-hover);border:1px solid var(--border);border-radius:12px;padding:.85rem;color:var(--text);text-align:left;cursor:pointer;font:inherit; }
+    .novelinha-subscription-plan:hover,.novelinha-subscription-plan.featured { border-color:var(--yellow); }
+    .novelinha-subscription-plan strong { display:block;color:var(--yellow);font-size:1.15rem;margin:.25rem 0; }
+    .novelinha-subscription-plan small { color:var(--muted); }
+    @media(max-width:700px){.novelinha-subscription-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     .novelinha-cart-action.added { border-color:#555;background:#222;color:#aaa; }
     .novelinha-episodes { margin-top:1.2rem; }
     .novelinha-episode { display:flex;justify-content:space-between;align-items:center;gap:1rem;background:#171717;border:1px solid #333;border-radius:10px;padding:.75rem;margin-top:.5rem;color:#fff;cursor:pointer; }
@@ -1683,6 +1692,33 @@
         vipCard.style.marginTop = '1rem';
         page.appendChild(vipCard);
       }
+      const subscriptions = document.createElement('section');
+      subscriptions.className = 'novelinha-subscriptions';
+      subscriptions.innerHTML = '<h2>Planos de assinatura VIP</h2><p>Escolha seu plano para liberar o catálogo de filmes e séries.</p>';
+      const subscriptionGrid = document.createElement('div');
+      subscriptionGrid.className = 'novelinha-subscription-grid';
+      [
+        { id: 'semanal', name: 'Semanal', price: 'R$ 9,90', access: '7 dias' },
+        { id: 'mensal', name: 'Mensal', price: 'R$ 19,90', access: '30 dias' },
+        { id: 'semestral', name: 'Semestral', price: 'R$ 89,90', access: '180 dias' },
+        { id: 'vitalicio', name: 'Vitalício', price: 'R$ 199,90', access: 'Acesso permanente' }
+      ].forEach(plan => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'novelinha-subscription-plan' + (plan.id === 'mensal' ? ' featured' : '');
+        option.innerHTML = '<span>' + plan.name + '</span><strong>' + plan.price + '</strong><small>' + plan.access + '</small>';
+        option.onclick = () => {
+          selectedVipPlan = plan.id;
+          document.querySelectorAll('#vipPlans .vip-plan-option').forEach(existing => {
+            existing.classList.toggle('active', existing.dataset.vipPlan === plan.id);
+          });
+          document.getElementById('subscribeBtn').textContent = 'Assinar plano ' + plan.name.toLowerCase() + ' com PIX';
+          document.getElementById('vipModal').classList.add('open');
+        };
+        subscriptionGrid.appendChild(option);
+      });
+      subscriptions.appendChild(subscriptionGrid);
+      page.appendChild(subscriptions);
       if (item.episodes && item.episodes.length) {
         const episodes = document.createElement('section');
         episodes.className = 'novelinha-episodes';
