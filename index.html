@@ -840,6 +840,35 @@
       #vipModal .vip-plan-option { padding:.62rem; font-size:.82rem; }
     }
 
+    /* Refinos para telas pequenas */
+    @media (max-width:700px) {
+      body { padding-bottom:calc(78px + env(safe-area-inset-bottom)); }
+      .catalog-tabs { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;overflow:visible;padding:8px 10px; }
+      .catalog-tab-btn { min-width:0;width:100%;min-height:58px;padding:6px 2px;font-size:.62rem;white-space:normal;text-align:center; }
+      #catalogo { padding:12px 12px calc(92px + env(safe-area-inset-bottom)); }
+      .catalog-controls { align-items:flex-end; }
+      .catalog-controls label { font-size:.68rem; }
+      .catalog-controls select { min-height:42px; }
+      .grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
+      .card img { width:100%;height:auto;aspect-ratio:2/3;object-fit:cover; }
+      .card-info h3 { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:2.35em; }
+      #shortDramaPromo, #shortDramaVipPromo { margin-bottom:.75rem !important; }
+      .novelinha-detail { gap:.8rem;padding:.85rem; }
+      .novelinha-detail-poster { width:min(100%,210px);max-height:315px;aspect-ratio:2/3; }
+      .novelinha-detail-info h1 { font-size:1.55rem; }
+      .novelinha-action,.novelinha-cart-action { max-width:none;min-height:46px; }
+      .novelinha-back { min-height:42px; }
+      .bottom-nav { padding-bottom:calc(.45rem + env(safe-area-inset-bottom)); }
+    }
+    @media (max-width:380px) {
+      .catalog-tabs { gap:3px;padding-inline:7px; }
+      .catalog-tab-btn { font-size:.57rem; }
+      .catalog-controls { gap:6px; }
+      .catalog-controls select { padding-inline:.4rem;font-size:.72rem; }
+      .grid { gap:8px; }
+      .card img { height:auto; }
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Meta Pixel Code -->
