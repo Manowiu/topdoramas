@@ -3116,7 +3116,8 @@
 
     async function unlockConfirmedPurchase() {
       const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
-      if (window.vipCheckoutPlan) {
+      const isVip = !!window.vipCheckoutPlan || titles.some(title => title.startsWith('Assinatura VIP'));
+      if (isVip) {
         window.isVip = true;
         updateVipNav();
       }
@@ -3128,7 +3129,17 @@
         });
         saveLibrary(userId, library);
       }
-      window.vipCheckoutPlan = null;
+      if (supabaseClient && (titles.length || isVip)) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const owned = new Set([...(session?.user?.user_metadata?.owned_titles || []), ...titles]);
+        await supabaseClient.auth.updateUser({
+          data: {
+            owned_titles: Array.from(owned),
+            ...(isVip ? { vip: true } : {})
+          }
+        });
+        await supabaseClient.auth.refreshSession();
+      }
       if (vodSource === 'loja') renderDoramas(currentFilter);
     }
 
@@ -3191,7 +3202,22 @@
         });
         const json = await res.json();
         if (!res.ok || !json.url) {
-          alert(json.error || 'Não foi possível carregar o vídeo');
+          await supabaseClient.auth.refreshSession();
+          const retry = await fetch('https://qeporypjsrtoihdxtjoq.supabase.co/functions/v1/video-url', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + (await supabaseClient.auth.getSession()).data.session?.access_token,
+              'apikey': 'sb_publishable_pGZjcRFm8AAlcbiab-8jXA_BB-hvILi'
+            },
+            body: JSON.stringify({ title })
+          });
+          const retryJson = await retry.json();
+          if (!retry.ok || !retryJson.url) {
+            alert(retryJson.error || json.error || 'Não foi possível carregar o vídeo');
+            return;
+          }
+          window.location.href = 'assistir.html?' + new URLSearchParams({ title, video: retryJson.url }).toString();
           return;
         }
         const params = new URLSearchParams({ title, video: json.url });
