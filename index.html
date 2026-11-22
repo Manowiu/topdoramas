@@ -1561,7 +1561,8 @@
 
     function canWatchNovelinha(item) {
       const userId = window.currentUserId;
-      return !!window.isVip || !!window.isAdmin || (!!userId && getLibrary(userId).includes(item.title));
+      const paid = safeGetJSON('topdoramas_paid_' + (userId || 'guest'), []);
+      return !!window.isVip || !!window.isAdmin || paid.includes(item.title) || (!!userId && getLibrary(userId).includes(item.title));
     }
 
     function renderDoramas(filter = currentFilter) {
@@ -3073,7 +3074,7 @@
       try {
         const data = await criarPagamentoS6X('pix');
         if (!data || !data.pix) return;
-        pendingTxId = data.id || data.transaction_id || data.payment_id || data.uuid || data.payment?.id || null;
+        pendingTxId = data.transaction_id || data.id || data.transactionId || data.payment_id || data.uuid || data.payment?.id || data.pix?.transaction_id || data.pix?.id || null;
         trackMeta('AddPaymentInfo', checkoutEventParams());
         document.getElementById('checkoutForm').style.display = 'none';
         document.getElementById('pixResult').style.display = 'block';
@@ -3102,7 +3103,9 @@
             cart = [];
             updateCartUI();
             await syncPurchasesFromSupabase();
-            setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
+            const openTitle = new URLSearchParams(window.location.search).get('novelinha');
+            if (openTitle) openNovelinhaPage(openTitle, false);
+            setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 1500);
           } catch (e) {
             console.error('Erro ao confirmar PIX:', e);
           }
@@ -3122,6 +3125,10 @@
         updateVipNav();
       }
       const userId = window.currentUserId || await getCurrentUserId();
+      const paidKey = 'topdoramas_paid_' + (userId || 'guest');
+      const paid = safeGetJSON(paidKey, []);
+      titles.forEach(title => { if (!paid.includes(title)) paid.push(title); });
+      safeSetJSON(paidKey, paid);
       if (userId && titles.length) {
         const library = getLibrary(userId);
         titles.forEach(title => {
@@ -3605,6 +3612,7 @@
           })
         });
         const json = await res.json();
+        if (json.status) document.getElementById('pixStatus').textContent = 'Aguardando pagamento... (' + json.status + ')';
         if (json.paid) return { id: pendingTxId, dorama_title: currentPurchaseTitle };
       }
       const { data } = await supabaseClient

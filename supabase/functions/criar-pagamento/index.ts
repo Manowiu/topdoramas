@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
     })
 
     const data = await res.json()
+    const payment = data.data || data
+    const transactionId = payment?.transaction_id || payment?.transactionId || payment?.id || payment?.payment_id || data.transaction_id || data.id
+    if (payment && transactionId && !payment.transaction_id) payment.transaction_id = transactionId
     return new Response(JSON.stringify(data), {
       status: res.status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -63,8 +66,15 @@ async function checkStatus(body: { transaction_id?: string, email?: string, user
     },
   })
   const data = await res.json()
-  const status = String(data.status || data.data?.status || data.payment?.status || '').toLowerCase()
-  const paid = PAID_STATUSES.includes(status)
+  const status = String(
+    data.status || data.data?.status || data.payment?.status || data.data?.payment?.status || ''
+  ).toLowerCase()
+  const paid = ['paid', 'approved', 'confirmed', 'completed', 'succeeded', 'success', 'pago', 'received', 'settled'].includes(status)
+    || status.includes('paid')
+    || status.includes('confirm')
+    || status.includes('approv')
+    || data.paid === true
+    || data.data?.paid === true
   if (paid && (body.email || body.user_id) && body.title) {
     await grantAccess(body.email, body.user_id, String(body.title).split(', ').map(t => t.trim()).filter(Boolean))
   }
