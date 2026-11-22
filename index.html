@@ -3053,6 +3053,25 @@
       window.vipCheckoutPlan = null;
     };
 
+    function metaCookie(name) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    function metaCheckoutTracking(eventId) {
+      const params = new URLSearchParams(window.location.search);
+      const fbclid = params.get('fbclid') || '';
+      const fbc = metaCookie('_fbc') || (fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : '');
+      return {
+        pixel_id: META_PIXEL_ID,
+        fbp: metaCookie('_fbp'),
+        fbc,
+        fbclid,
+        event_id: eventId,
+        event_source_url: window.location.href
+      };
+    }
+
     async function criarPagamentoS6X(method) {
       const name = document.getElementById('buyerName').value.trim();
       const email = document.getElementById('buyerEmail').value.trim().toLowerCase();
@@ -3072,17 +3091,26 @@
 
       const { data: { session } } = supabaseClient ? await supabaseClient.auth.getSession() : { data: { session: null } };
       const amount = Number((window.vipCheckoutPlan ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(cart.length || 1)).toFixed(2));
+      const tracking = metaCheckoutTracking('checkout-' + Date.now());
       const body = {
         amount,
         customer: { name, email, phone, cellphone: phone },
         description: (currentPurchaseTitle || 'TopDoramas').slice(0, 120),
         product: { name: (currentPurchaseTitle || 'TopDoramas').slice(0, 80) },
         order_reference: currentPurchaseTitle || 'TopDoramas',
+        pixel_id: META_PIXEL_ID,
+        meta_pixel_id: META_PIXEL_ID,
+        tracking,
         metadata: {
           dorama_title: currentPurchaseTitle || 'TopDoramas',
           phone,
           account_email: session?.user?.email || email,
-          user_id: session?.user?.id || ''
+          user_id: session?.user?.id || '',
+          pixel_id: META_PIXEL_ID,
+          fbp: tracking.fbp,
+          fbc: tracking.fbc,
+          event_id: tracking.event_id,
+          event_source_url: tracking.event_source_url
         },
         payment_method: method
       };
@@ -3703,7 +3731,8 @@
             email: session.user.email,
             user_id: session.user.id,
             title: currentPurchaseTitle,
-            value: pendingPurchase?.value || checkoutEventParams().value
+            value: pendingPurchase?.value || checkoutEventParams().value,
+            tracking: metaCheckoutTracking('purchase-' + pendingTxId)
           })
         });
         const json = await res.json();

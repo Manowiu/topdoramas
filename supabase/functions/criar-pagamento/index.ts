@@ -20,10 +20,12 @@ async function sha256(value: string) {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-async function sendMetaPurchase(email: string | undefined, title: string, transactionId: string, value: number) {
+async function sendMetaPurchase(email: string | undefined, title: string, transactionId: string, value: number, tracking: any = {}) {
   if (!META_ACCESS_TOKEN) return
-  const userData: Record<string, string[]> = {}
+  const userData: Record<string, string | string[]> = {}
   if (email) userData.em = [await sha256(email)]
+  if (tracking.fbp) userData.fbp = tracking.fbp
+  if (tracking.fbc) userData.fbc = tracking.fbc
   await fetch(`https://graph.facebook.com/v21.0/${META_PIXEL_ID}/events?access_token=${META_ACCESS_TOKEN}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -31,9 +33,9 @@ async function sendMetaPurchase(email: string | undefined, title: string, transa
       data: [{
         event_name: 'Purchase',
         event_time: Math.floor(Date.now() / 1000),
-        event_id: 'purchase-' + transactionId,
+        event_id: tracking.event_id || ('purchase-' + transactionId),
         action_source: 'website',
-        event_source_url: 'https://topdoramas.shop',
+        event_source_url: tracking.event_source_url || 'https://topdoramas.shop',
         user_data: userData,
         custom_data: {
           currency: 'BRL',
@@ -88,7 +90,7 @@ Deno.serve(async (req) => {
   }
 })
 
-async function checkStatus(body: { transaction_id?: string, email?: string, user_id?: string, title?: string, value?: number }) {
+async function checkStatus(body: { transaction_id?: string, email?: string, user_id?: string, title?: string, value?: number, tracking?: any }) {
   const transactionId = body.transaction_id
   if (!transactionId) {
     return json({ success: false, error: 'Transação obrigatória' }, 400)
@@ -127,7 +129,7 @@ async function checkStatus(body: { transaction_id?: string, email?: string, user
     const titles = String(body.title).includes(' || ') ? String(body.title).split(' || ') : [String(body.title)]
     const cleanTitles = titles.map(t => t.trim()).filter(Boolean)
     await grantAccess(body.email, body.user_id, cleanTitles)
-    await sendMetaPurchase(body.email, body.title, transactionId, Number(body.value || 0))
+    await sendMetaPurchase(body.email, body.title, transactionId, Number(body.value || 0), body.tracking || {})
   }
   return json({ success: true, paid, status, data })
 }
