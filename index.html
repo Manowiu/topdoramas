@@ -3056,6 +3056,7 @@
 
     let pixInFlight = false;
     let pixCheckInterval = null;
+    let pendingTxId = null;
 
     document.getElementById('gerarPixBtn').onclick = async () => {
       if (pixInFlight) return;
@@ -3072,6 +3073,7 @@
       try {
         const data = await criarPagamentoS6X('pix');
         if (!data || !data.pix) return;
+        pendingTxId = data.id || data.transaction_id || data.payment_id || data.uuid || data.payment?.id || null;
         trackMeta('AddPaymentInfo', checkoutEventParams());
         document.getElementById('checkoutForm').style.display = 'none';
         document.getElementById('pixResult').style.display = 'block';
@@ -3081,22 +3083,28 @@
         document.getElementById('pixCopy').value = data.pix.copy_paste || data.pix.qr_code || '';
         document.getElementById('pixStatus').textContent = 'Aguardando pagamento... (atualiza automaticamente)';
         pendingPurchase = checkoutEventParams();
-        safeSetJSON('pending_meta_purchase', { ...pendingPurchase, title: currentPurchaseTitle, startedAt: Date.now() });
+        safeSetJSON('pending_meta_purchase', { ...pendingPurchase, title: currentPurchaseTitle, startedAt: Date.now(), transactionId: pendingTxId });
         if (pixCheckInterval) clearInterval(pixCheckInterval);
         pixCheckInterval = setInterval(async () => {
-          const confirmed = await findConfirmedPurchase();
-          if (!confirmed) return;
-          clearInterval(pixCheckInterval);
-          pixCheckInterval = null;
-          sendPurchaseEvent({ ...confirmed, value: pendingPurchase?.value });
-          pendingPurchase = null;
-          safeSetJSON('pending_meta_purchase', null);
-          document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
-          document.getElementById('pixStatus').style.color = '#2ecc71';
-          window.vipCheckoutPlan = null;
-          cart = [];
-          updateCartUI();
-          setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
+          try {
+            const confirmed = await findConfirmedPurchase();
+            if (!confirmed) return;
+            clearInterval(pixCheckInterval);
+            pixCheckInterval = null;
+            sendPurchaseEvent({ ...confirmed, value: pendingPurchase?.value });
+            pendingPurchase = null;
+            pendingTxId = null;
+            safeSetJSON('pending_meta_purchase', null);
+            document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
+            document.getElementById('pixStatus').style.color = '#2ecc71';
+            window.vipCheckoutPlan = null;
+            cart = [];
+            updateCartUI();
+            await syncPurchasesFromSupabase();
+            setTimeout(() => document.getElementById('checkoutModal').classList.remove('open'), 2000);
+          } catch (e) {
+            console.error('Erro ao confirmar PIX:', e);
+          }
         }, 5000);
       } finally {
         pixInFlight = false;
@@ -3527,21 +3535,44 @@
 
     async function findConfirmedPurchase() {
       if (!supabaseClient) return null;
-      const { data: { session } } = await supabaseClient.auth.getSession();
+      const refreshed = await supabaseClient.auth.refreshSession();
+      const session = refreshed.data?.session || (await supabaseClient.auth.getSession()).data.session;
       if (!session) return null;
+      const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
+      const owned = Array.isArray(session.user.user_metadata?.owned_titles) ? session.user.user_metadata.owned_titles : [];
+      const vipPaid = window.vipCheckoutPlan && (session.user.user_metadata?.vip === true || owned.some(t => String(t).startsWith('Assinatura VIP')));
+      if (vipPaid || titles.some(t => owned.includes(t))) {
+        return { id: 'metadata', dorama_title: titles[0] || currentPurchaseTitle };
+      }
+      if (pendingTxId) {
+        const res = await fetch(CRIAR_PAGAMENTO_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer sb_publishable_pGZjcRFm8AAlcbiab-8jXA_BB-hvILi'
+          },
+          body: JSON.stringify({
+            action: 'status',
+            transaction_id: pendingTxId,
+            email: session.user.email,
+            title: currentPurchaseTitle
+          })
+        });
+        const json = await res.json();
+        if (json.paid) return { id: pendingTxId, dorama_title: currentPurchaseTitle };
+      }
       const { data } = await supabaseClient
         .from('purchases')
         .select('id, dorama_title, created_at')
         .eq('email', session.user.email)
         .eq('status', 'paid');
-      const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
       const pending = safeGetJSON('pending_meta_purchase', null);
       const startedAt = pending?.startedAt || 0;
       return (data || []).find(p => {
         const saved = String(p.dorama_title || '');
         const matchesTitle = !titles.length || titles.some(t => saved === t || saved.includes(t) || t.includes(saved));
-        const recent = startedAt && Date.parse(p.created_at || '') >= startedAt - 60000;
-        return matchesTitle && (!startedAt || recent || saved === currentPurchaseTitle);
+        const recent = startedAt && Date.parse(p.created_at || '') >= startedAt - 120000;
+        return matchesTitle && (recent || saved === currentPurchaseTitle);
       }) || null;
     }
 
