@@ -11,7 +11,42 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const PAID_STATUSES = ['paid', 'approved', 'confirmed', 'completed', 'succeeded', 'success']
+const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') || '1466657702229112'
+const META_ACCESS_TOKEN = Deno.env.get('META_ACCESS_TOKEN') || ''
+
+async function sha256(value: string) {
+  const data = new TextEncoder().encode(value.trim().toLowerCase())
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function sendMetaPurchase(email: string | undefined, title: string, transactionId: string, value: number) {
+  if (!META_ACCESS_TOKEN) return
+  const userData: Record<string, string[]> = {}
+  if (email) userData.em = [await sha256(email)]
+  await fetch(`https://graph.facebook.com/v21.0/${META_PIXEL_ID}/events?access_token=${META_ACCESS_TOKEN}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: [{
+        event_name: 'Purchase',
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: 'purchase-' + transactionId,
+        action_source: 'website',
+        event_source_url: 'https://topdoramas.shop',
+        user_data: userData,
+        custom_data: {
+          currency: 'BRL',
+          value: Number(value || 0),
+          content_ids: [title],
+          content_name: title,
+          content_type: 'product',
+          num_items: 1
+        }
+      }]
+    })
+  })
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -53,7 +88,7 @@ Deno.serve(async (req) => {
   }
 })
 
-async function checkStatus(body: { transaction_id?: string, email?: string, user_id?: string, title?: string }) {
+async function checkStatus(body: { transaction_id?: string, email?: string, user_id?: string, title?: string, value?: number }) {
   const transactionId = body.transaction_id
   if (!transactionId) {
     return json({ success: false, error: 'Transação obrigatória' }, 400)
@@ -76,7 +111,9 @@ async function checkStatus(body: { transaction_id?: string, email?: string, user
     || data.paid === true
     || data.data?.paid === true
   if (paid && (body.email || body.user_id) && body.title) {
-    await grantAccess(body.email, body.user_id, String(body.title).split(', ').map(t => t.trim()).filter(Boolean))
+    const titles = String(body.title).split(', ').map(t => t.trim()).filter(Boolean)
+    await grantAccess(body.email, body.user_id, titles)
+    await sendMetaPurchase(body.email, body.title, transactionId, Number(body.value || 0))
   }
   return json({ success: true, paid, status, data })
 }

@@ -2956,12 +2956,13 @@
       params = params || {};
       const key = event + '|' + (eventId || params.content_name || '') + '|' + (params.value || '');
       const last = metaSent.get(key) || 0;
-      if (Date.now() - last < 60000) return;
+      if (Date.now() - last < 15000) return;
       metaSent.set(key, Date.now());
+      const options = eventId ? { eventID: eventId } : undefined;
       try {
         if (typeof fbq === 'function') {
-          fbq('trackSingle', META_PIXEL_ID, event, params, eventId ? { eventID: eventId } : undefined);
-          return;
+          fbq('track', event, params, options);
+          fbq('trackSingle', META_PIXEL_ID, event, params, options);
         }
       } catch (e) {}
       try {
@@ -2972,7 +2973,8 @@
           dl: location.href,
           rl: document.referrer || '',
           if: 'false',
-          ts: String(Date.now())
+          ts: String(Date.now()),
+          cd: JSON.stringify(params)
         });
         if (params.value != null) query.set('cd[value]', String(params.value));
         if (params.currency) query.set('cd[currency]', params.currency);
@@ -2982,20 +2984,13 @@
     }
 
     function sendPurchaseEvent(purchase) {
-      const title = purchase.dorama_title || purchase.content_name || 'TopDoramas';
-      const eventId = 'purchase-' + (purchase.id || purchase.created_at || title);
-      const sent = safeGetJSON('meta_purchase_sent', []);
-      if (sent.includes(eventId)) return;
-      sent.push(eventId);
-      safeSetJSON('meta_purchase_sent', sent.slice(-100));
+      const params = pendingPurchase || checkoutEventParams();
+      const eventId = 'purchase-' + (purchase.id || purchase.transaction_id || pendingTxId || purchase.dorama_title || Date.now());
       trackMeta('Purchase', {
-        value: Number(purchase.value || (window.vipCheckoutPlan && VIP_PLANS[window.vipCheckoutPlan] ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(1))),
+        ...params,
+        value: Number(purchase.value || params.value || 0),
         currency: 'BRL',
-        content_type: 'product',
-        content_ids: [title],
-        content_name: title,
-        contents: [{ id: title, quantity: 1 }],
-        num_items: 1
+        content_name: purchase.dorama_title || params.content_name || 'TopDoramas'
       }, eventId);
     }
 
@@ -3679,7 +3674,8 @@
             transaction_id: pendingTxId,
             email: session.user.email,
             user_id: session.user.id,
-            title: currentPurchaseTitle
+            title: currentPurchaseTitle,
+            value: pendingPurchase?.value || checkoutEventParams().value
           })
         });
         const json = await res.json();
