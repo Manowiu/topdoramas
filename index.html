@@ -118,6 +118,14 @@
     #novelinhaPage { max-width:1100px;margin:0 auto;padding:1.25rem 1rem 2rem; }
     .novelinha-back { background:transparent;border:1px solid #333;color:#ddd;border-radius:999px;padding:.55rem .9rem;font:inherit;cursor:pointer;margin-bottom:1rem; }
     .novelinha-detail { display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:1.5rem;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.25rem; }
+    .novelinha-carousel-section { margin:1.15rem 0;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem; }
+    .novelinha-carousel-section h2 { font-size:1.05rem;margin:0 0 .75rem; }
+    .novelinha-carousel-track { display:flex;gap:.7rem;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#555 transparent;padding:.1rem .1rem .65rem; }
+    .novelinha-carousel-card { flex:0 0 128px;scroll-snap-align:start;border:1px solid #30313a;border-radius:11px;overflow:hidden;background:#171920;color:var(--text);text-align:left;padding:0;cursor:pointer;font:inherit; }
+    .novelinha-carousel-card:hover { border-color:var(--yellow);transform:translateY(-2px); }
+    .novelinha-carousel-card img { display:block;width:100%;height:172px;object-fit:cover;background:#090a0d; }
+    .novelinha-carousel-card span { display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;padding:.5rem;font-size:.78rem;line-height:1.3;min-height:2.5rem; }
+    @media(max-width:700px){.novelinha-carousel-section{padding:.8rem;margin:.8rem 0}.novelinha-carousel-card{flex-basis:106px}.novelinha-carousel-card img{height:145px}}
     .novelinha-detail-poster { width:100%;max-height:520px;object-fit:cover;border-radius:12px;background:#111; }
     .novelinha-detail-info h1 { font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.08;margin:.3rem 0 .7rem; }
     .novelinha-detail-meta,.novelinha-detail-genres { display:flex;gap:.5rem;flex-wrap:wrap;color:var(--muted);margin:.7rem 0; }
@@ -1685,6 +1693,31 @@
       }
       details.append(poster, info);
       page.append(back, details);
+
+      const carouselSection = document.createElement('section');
+      carouselSection.className = 'novelinha-carousel-section';
+      const carouselHeading = document.createElement('h2');
+      carouselHeading.textContent = 'Mais novelinhas';
+      const carouselTrack = document.createElement('div');
+      carouselTrack.className = 'novelinha-carousel-track';
+      doramas.filter(other => other.title !== item.title).forEach(other => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'novelinha-carousel-card';
+        const cover = document.createElement('img');
+        cover.src = other.poster || '';
+        cover.alt = other.title;
+        cover.loading = 'lazy';
+        cover.onerror = () => { cover.src = 'https://via.placeholder.com/500x750/111111/FFD700?text=TopDoramas'; };
+        const label = document.createElement('span');
+        label.textContent = other.title;
+        card.append(cover, label);
+        card.onclick = () => openNovelinhaPage(other.title);
+        carouselTrack.appendChild(card);
+      });
+      carouselSection.append(carouselHeading, carouselTrack);
+      page.appendChild(carouselSection);
+
       const priceCard = document.getElementById('shortDramaPromo')?.cloneNode(true);
       if (priceCard) {
         priceCard.id = 'novelinhaPriceCard';
