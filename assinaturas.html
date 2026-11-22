@@ -58,6 +58,18 @@
       .choose{grid-column:1/-1}
     }
 
+      .catalog-preview{margin:34px 0 22px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+    .catalog-preview h2{font-size:1.35rem;margin:0 0 4px}
+    .catalog-preview-intro{color:var(--muted);font-size:.9rem;margin:0 0 14px}
+    .catalog-preview-track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#555 transparent;padding:2px 2px 12px}
+    .catalog-preview-card{flex:0 0 142px;scroll-snap-align:start;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+    .catalog-preview-card img{display:block;width:100%;height:190px;object-fit:cover;background:#090a0d}
+    .catalog-preview-card-body{padding:9px}
+    .catalog-preview-kind{display:block;color:var(--gold);font-size:.65rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+    .catalog-preview-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:750;font-size:.83rem;line-height:1.3;min-height:2.2em}
+    .catalog-preview-status{color:var(--muted);font-size:.84rem;padding:1rem}
+    @media(max-width:600px){.catalog-preview{margin:24px 0 18px;padding:14px;border-radius:15px}.catalog-preview h2{font-size:1.15rem}.catalog-preview-intro{font-size:.82rem}.catalog-preview-track{gap:9px}.catalog-preview-card{flex-basis:116px}.catalog-preview-card img{height:156px}.catalog-preview-card-body{padding:7px}.catalog-preview-title{font-size:.77rem}}
+
   </style>
 </head>
 <body>
@@ -89,7 +101,61 @@
         <ul class="benefits"><li>Acesso VIP permanente</li><li>Filmes e séries para assinantes</li></ul><span class="choose">Escolher plano</span>
       </a>
     </section>
+    <section class="catalog-preview" aria-label="Prévia dos títulos dos catálogos">
+      <h2>Veja alguns títulos dos catálogos</h2>
+      <p class="catalog-preview-intro">Uma prévia dos conteúdos disponíveis. Os cards são apenas informativos.</p>
+      <div class="catalog-preview-track" id="catalogPreviewTrack" aria-live="polite"><p class="catalog-preview-status">Carregando títulos...</p></div>
+    </section>
     <p class="plan-note">O plano semanal libera todas as novelinhas por 7 dias, mas não inclui os catálogos de filmes e séries. Os demais planos VIP liberam esses catálogos.</p>
   </main>
+  <script>
+    (() => {
+      const username = 'manowiu-vods';
+      const password = 'Koala56252';
+      const endpoint = 'https://nixplay.lat';
+      const track = document.getElementById('catalogPreviewTrack');
+      const normalize = value => String(value || '').toLowerCase();
+      const categoryForSeries = item => {
+        const genre = normalize(item.genre);
+        const name = normalize(item.name || item.title);
+        if (/anima|anime|donghua|animation/.test(genre)) return 'Animes';
+        if (/mini.?s.rie|miniseries|mini.?drama|micro.?drama/.test(genre + ' ' + name)) return 'Novelinha';
+        if (genre.includes('soap') || /novela|novelinha/.test(genre) || /novela|novelinha/.test(name)) return 'Séries';
+        if (genre.includes('drama')) return 'Doramas';
+        return 'Séries';
+      };
+      const safe = value => String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+      async function loadCatalogPreview() {
+        try {
+          const movieUrl = endpoint + '/api/catalog.php?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password) + '&type=movies&page=1';
+          const seriesUrl = endpoint + '/player_api.php?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password) + '&action=get_series';
+          const [movieResult, seriesResult] = await Promise.allSettled([
+            fetch(movieUrl).then(response => response.json()),
+            fetch(seriesUrl).then(response => response.json())
+          ]);
+          const movies = movieResult.status === 'fulfilled' ? (movieResult.value.data || []).map(item => ({ title:item.title || item.name, poster:item.poster || item.cover, kind:'Filme' })) : [];
+          const series = seriesResult.status === 'fulfilled' && Array.isArray(seriesResult.value) ? seriesResult.value.map(item => ({ title:item.name || item.title, poster:item.cover || item.poster, kind:categoryForSeries(item) })) : [];
+          const groups = ['Novelinha','Doramas','Séries','Animes','Filme'];
+          const selected = groups.flatMap(kind => [...movies, ...series].filter(item => item.kind === kind && item.title && item.poster).slice(0, 8));
+          const unique = [...new Map(selected.map(item => [item.kind + '|' + item.title.toLowerCase(), item])).values()];
+          track.replaceChildren();
+          if (!unique.length) {
+            track.innerHTML = '<p class="catalog-preview-status">Não foi possível carregar a prévia dos catálogos agora.</p>';
+            return;
+          }
+          unique.forEach(item => {
+            const card = document.createElement('article');
+            card.className = 'catalog-preview-card';
+            card.setAttribute('role','listitem');
+            card.innerHTML = '<img loading="lazy" src="' + safe(item.poster) + '" alt="' + safe(item.title) + '" onerror="this.style.display=\'none\'"><div class="catalog-preview-card-body"><span class="catalog-preview-kind">' + safe(item.kind) + '</span><span class="catalog-preview-title">' + safe(item.title) + '</span></div>';
+            track.appendChild(card);
+          });
+        } catch (error) {
+          track.innerHTML = '<p class="catalog-preview-status">Não foi possível carregar a prévia dos catálogos agora.</p>';
+        }
+      }
+      loadCatalogPreview();
+    })();
+  </script>
 </body>
 </html>
