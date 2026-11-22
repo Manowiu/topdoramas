@@ -115,6 +115,7 @@
       const endpoint = 'https://nixplay.lat';
       const track = document.getElementById('catalogPreviewTrack');
       const normalize = value => String(value || '').toLowerCase();
+      const cleanTitle = value => String(value || '').replace(/\\s*\\[L\\]\\s*/gi, ' ').replace(/\\s+/g, ' ').trim();
       const categoryForSeries = item => {
         const genre = normalize(item.genre);
         const name = normalize(item.name || item.title);
@@ -133,8 +134,8 @@
             fetch(movieUrl).then(response => response.json()),
             fetch(seriesUrl).then(response => response.json())
           ]);
-          const movies = movieResult.status === 'fulfilled' ? (movieResult.value.data || []).map(item => ({ title:item.title || item.name, poster:item.poster || item.cover, kind:'Filme' })) : [];
-          const series = seriesResult.status === 'fulfilled' && Array.isArray(seriesResult.value) ? seriesResult.value.map(item => ({ title:item.name || item.title, poster:item.cover || item.poster, kind:categoryForSeries(item) })) : [];
+          const movies = movieResult.status === 'fulfilled' ? (movieResult.value.data || []).map(item => ({ title:cleanTitle(item.title || item.name), poster:item.poster || item.cover, kind:'Filme' })) : [];
+          const series = seriesResult.status === 'fulfilled' && Array.isArray(seriesResult.value) ? seriesResult.value.map(item => ({ title:cleanTitle(item.name || item.title), poster:item.cover || item.poster, kind:categoryForSeries(item) })) : [];
           const groups = ['Filme','Novelinha','Doramas','Séries','Animes'];
           const selected = groups.flatMap(kind => [...movies, ...series].filter(item => item.kind === kind && item.title && item.poster).slice(0, 8));
           const unique = [...new Map(selected.map(item => [item.kind + '|' + item.title.toLowerCase(), item])).values()];
