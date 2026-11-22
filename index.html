@@ -3092,10 +3092,11 @@
             clearInterval(pixCheckInterval);
             pixCheckInterval = null;
             sendPurchaseEvent({ ...confirmed, value: pendingPurchase?.value });
+            await unlockConfirmedPurchase();
             pendingPurchase = null;
             pendingTxId = null;
             safeSetJSON('pending_meta_purchase', null);
-            document.getElementById('pixStatus').textContent = 'Pagamento confirmado!';
+            document.getElementById('pixStatus').textContent = 'Pagamento confirmado! Acesso liberado.';
             document.getElementById('pixStatus').style.color = '#2ecc71';
             window.vipCheckoutPlan = null;
             cart = [];
@@ -3112,6 +3113,24 @@
         btn.textContent = 'Gerar PIX';
       }
     };
+
+    async function unlockConfirmedPurchase() {
+      const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
+      if (window.vipCheckoutPlan) {
+        window.isVip = true;
+        updateVipNav();
+      }
+      const userId = window.currentUserId || await getCurrentUserId();
+      if (userId && titles.length) {
+        const library = getLibrary(userId);
+        titles.forEach(title => {
+          if (!library.includes(title)) library.push(title);
+        });
+        saveLibrary(userId, library);
+      }
+      window.vipCheckoutPlan = null;
+      if (vodSource === 'loja') renderDoramas(currentFilter);
+    }
 
     document.getElementById('copyPixBtn').onclick = () => {
       const ta = document.getElementById('pixCopy');
@@ -3555,6 +3574,7 @@
             action: 'status',
             transaction_id: pendingTxId,
             email: session.user.email,
+            user_id: session.user.id,
             title: currentPurchaseTitle
           })
         });

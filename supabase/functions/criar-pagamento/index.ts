@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
   }
 })
 
-async function checkStatus(body: { transaction_id?: string, email?: string, title?: string }) {
+async function checkStatus(body: { transaction_id?: string, email?: string, user_id?: string, title?: string }) {
   const transactionId = body.transaction_id
   if (!transactionId) {
     return json({ success: false, error: 'Transação obrigatória' }, 400)
@@ -65,16 +65,23 @@ async function checkStatus(body: { transaction_id?: string, email?: string, titl
   const data = await res.json()
   const status = String(data.status || data.data?.status || data.payment?.status || '').toLowerCase()
   const paid = PAID_STATUSES.includes(status)
-  if (paid && body.email && body.title) {
-    await grantAccess(body.email, String(body.title).split(', ').map(t => t.trim()).filter(Boolean))
+  if (paid && (body.email || body.user_id) && body.title) {
+    await grantAccess(body.email, body.user_id, String(body.title).split(', ').map(t => t.trim()).filter(Boolean))
   }
   return json({ success: true, paid, status, data })
 }
 
-async function grantAccess(email: string, titles: string[]) {
+async function grantAccess(email: string | undefined, userId: string | undefined, titles: string[]) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  const listed = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-  const user = listed.data?.users?.find(u => (u.email || '').toLowerCase() === email.toLowerCase())
+  let user = null
+  if (userId) {
+    const byId = await supabase.auth.admin.getUserById(userId)
+    user = byId.data?.user || null
+  }
+  if (!user && email) {
+    const listed = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    user = listed.data?.users?.find(u => (u.email || '').toLowerCase() === email.toLowerCase()) || null
+  }
   if (!user) return
   const meta = { ...(user.user_metadata || {}) }
   const owned = new Set<string>(Array.isArray(meta.owned_titles) ? meta.owned_titles : [])
@@ -84,8 +91,8 @@ async function grantAccess(email: string, titles: string[]) {
   await supabase.auth.admin.updateUserById(user.id, { user_metadata: meta })
   for (const title of titles) {
     await supabase.from('purchases').upsert({
-      transaction_id: `status:${email}:${title}`,
-      email,
+      transaction_id: `status:${user.id}:${title}`,
+      email: user.email || email,
       dorama_title: title,
       status: 'paid',
       created_at: new Date().toISOString()
