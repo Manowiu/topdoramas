@@ -115,7 +115,7 @@
       const endpoint = 'https://nixplay.lat';
       const track = document.getElementById('catalogPreviewTrack');
       const normalize = value => String(value || '').toLowerCase();
-      const cleanTitle = value => String(value || '').replace(/\\s*\\[L\\]\\s*/gi, ' ').replace(/\\s+/g, ' ').trim();
+      const cleanTitle = value => String(value || '').replace(/\s*\[L\]\s*/gi, ' ').replace(/\s+/g, ' ').trim();
       const categoryForSeries = item => {
         const genre = normalize(item.genre);
         const name = normalize(item.name || item.title);
