@@ -135,7 +135,7 @@
           ]);
           const movies = movieResult.status === 'fulfilled' ? (movieResult.value.data || []).map(item => ({ title:item.title || item.name, poster:item.poster || item.cover, kind:'Filme' })) : [];
           const series = seriesResult.status === 'fulfilled' && Array.isArray(seriesResult.value) ? seriesResult.value.map(item => ({ title:item.name || item.title, poster:item.cover || item.poster, kind:categoryForSeries(item) })) : [];
-          const groups = ['Novelinha','Doramas','Séries','Animes','Filme'];
+          const groups = ['Filme','Novelinha','Doramas','Séries','Animes'];
           const selected = groups.flatMap(kind => [...movies, ...series].filter(item => item.kind === kind && item.title && item.poster).slice(0, 8));
           const unique = [...new Map(selected.map(item => [item.kind + '|' + item.title.toLowerCase(), item])).values()];
           track.replaceChildren();
