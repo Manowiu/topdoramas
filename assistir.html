@@ -131,7 +131,8 @@
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) { showBlocked('Assine o VIP para assistir.'); return; }
       const isAdmin = session.user.email === 'admin@topdoramas.com' || session.user.user_metadata?.role === 'admin';
-      const isVipUser = isAdmin || session.user.user_metadata?.vip === true || session.user.email === 'gabrieltanajura@gmail.com' || session.user.email === 'taniaapdobem@gmail.com';
+      const vipUntil = Date.parse(session.user.user_metadata?.vip_until || '');
+      const isVipUser = isAdmin || session.user.email === 'gabrieltanajura@gmail.com' || session.user.email === 'taniaapdobem@gmail.com' || (session.user.user_metadata?.vip === true && (!session.user.user_metadata?.vip_until || (Number.isFinite(vipUntil) && vipUntil > Date.now())));
       if (isVipUser) { startVideo(); return; }
       const { data } = await supabaseClient.from('purchases').select('id').eq('email', session.user.email).eq('dorama_title', 'Assinatura VIP').eq('status', 'paid').limit(1);
       if (data && data.length) startVideo();

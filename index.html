@@ -1867,6 +1867,31 @@
       if (label) label.textContent = active ? 'VIP ativo' : 'Seja VIP';
     }
 
+    function vipStorageKey(userId) {
+      return 'topdoramas_vip_' + (userId || 'guest');
+    }
+
+    function saveLocalVip(userId, planId) {
+      const plan = VIP_PLANS[planId] || VIP_PLANS.mensal;
+      const until = plan.days ? Date.now() + plan.days * 24 * 60 * 60 * 1000 : null;
+      safeSetJSON(vipStorageKey(userId), { active: true, plan: planId, until, title: plan.purchaseTitle });
+      return until;
+    }
+
+    function hasLocalVip(userId) {
+      const saved = safeGetJSON(vipStorageKey(userId), null);
+      if (!saved?.active) return false;
+      return !saved.until || saved.until > Date.now();
+    }
+
+    function metadataVipActive(user) {
+      if (!user) return false;
+      if (user.email === 'gabrieltanajura@gmail.com' || user.email === 'taniaapdobem@gmail.com') return true;
+      if (user.user_metadata?.role === 'admin' || user.email === 'admin@topdoramas.com') return true;
+      if (user.user_metadata?.vip !== true) return false;
+      const until = Date.parse(user.user_metadata?.vip_until || '');
+      return !user.user_metadata?.vip_until || (Number.isFinite(until) && until > Date.now());
+    }
     function hasActiveVip(purchases, includeWeekly = true) {
       const now = Date.now();
       return (purchases || []).some(purchase => {
@@ -1956,7 +1981,7 @@
         return false;
       }
       const isAdmin = session.user.email === 'admin@topdoramas.com' || session.user.user_metadata?.role === 'admin';
-      const isVipUser = isAdmin || session.user.user_metadata?.vip === true || session.user.email === 'gabrieltanajura@gmail.com' || session.user.email === 'taniaapdobem@gmail.com';
+      const isVipUser = isAdmin || metadataVipActive(session.user) || hasLocalVip(session.user.id);
       if (isVipUser) { window.isVip = true; updateVipNav(); return true; }
       const { data } = await supabaseClient
         .from('purchases')
@@ -3119,17 +3144,20 @@
 
     async function unlockConfirmedPurchase() {
       const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
-      const isVip = !!window.vipCheckoutPlan || titles.some(title => title.startsWith('Assinatura VIP'));
+      const planId = window.vipCheckoutPlan;
+      const isVip = !!planId || titles.some(title => title.startsWith('Assinatura VIP'));
+      const userId = window.currentUserId || await getCurrentUserId();
+      let vipUntil = null;
       if (isVip) {
+        vipUntil = saveLocalVip(userId, planId || 'mensal');
         window.isVip = true;
         updateVipNav();
       }
-      const userId = window.currentUserId || await getCurrentUserId();
       const paidKey = 'topdoramas_paid_' + (userId || 'guest');
       const paid = safeGetJSON(paidKey, []);
       titles.forEach(title => { if (!paid.includes(title)) paid.push(title); });
       safeSetJSON(paidKey, paid);
-      if (userId && titles.length) {
+      if (userId && titles.length && !isVip) {
         const library = getLibrary(userId);
         titles.forEach(title => {
           if (!library.includes(title)) library.push(title);
@@ -3142,7 +3170,7 @@
         await supabaseClient.auth.updateUser({
           data: {
             owned_titles: Array.from(owned),
-            ...(isVip ? { vip: true } : {})
+            ...(isVip ? { vip: true, vip_plan: planId || 'mensal', vip_until: vipUntil ? new Date(vipUntil).toISOString() : null } : {})
           }
         });
         await supabaseClient.auth.refreshSession();
@@ -3644,7 +3672,7 @@
         'koalagamepls@gmail.com': ['O CEO que Sentiu Minha Gravidez'],
         'vitoriacon@gmail.com': ['Ele Devia Tudo a Mim']
       };
-      const metadataVip = session.user.user_metadata?.vip === true || email === 'gabrieltanajura@gmail.com' || email === 'taniaapdobem@gmail.com';
+      const metadataVip = metadataVipActive(session.user) || hasLocalVip(session.user.id);
       const ownedTitles = Array.isArray(session.user.user_metadata?.owned_titles) ? session.user.user_metadata.owned_titles : [];
       const previousVip = !!window.isVip;
       let accessUpdated = false;

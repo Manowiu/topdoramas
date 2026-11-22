@@ -97,7 +97,12 @@ async function grantAccess(email: string | undefined, userId: string | undefined
   const owned = new Set<string>(Array.isArray(meta.owned_titles) ? meta.owned_titles : [])
   titles.forEach(title => owned.add(title))
   meta.owned_titles = Array.from(owned)
-  if (titles.some(title => title.startsWith('Assinatura VIP'))) meta.vip = true
+  if (titles.some(title => title.startsWith('Assinatura VIP'))) {
+    meta.vip = true
+    meta.vip_plan = title
+    const days = title.includes('Vital') ? null : title.includes('Semestral') ? 180 : title.includes('Semanal') ? 7 : 30
+    meta.vip_until = days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString() : null
+  }
   await supabase.auth.admin.updateUserById(user.id, { user_metadata: meta })
   for (const title of titles) {
     await supabase.from('purchases').upsert({
