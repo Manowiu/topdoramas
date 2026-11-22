@@ -2606,14 +2606,8 @@
       if (!isLogged) {
         // Abre o modal de cadastro
         document.getElementById('cartModal').classList.remove('open');
-        document.getElementById('authModal').classList.add('open');
-        // Ativa a aba de criar conta
-        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-        document.querySelector('.auth-tab[data-tab="register"]').classList.add('active');
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('registerForm').style.display = 'block';
-        // Marca que após login deve ir pro checkout
         window.pendingCheckout = true;
+        askToCreateAccount();
         return;
       }
       
@@ -2967,8 +2961,32 @@
       trackMeta('InitiateCheckout', checkoutEventParams());
     }
 
-    window.comprarDorama = function(title) {
+    function askToCreateAccount() {
+      document.getElementById('checkoutModal')?.classList.remove('open');
+      document.getElementById('authModal').classList.add('open');
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      const registerTab = document.querySelector('.auth-tab[data-tab="register"]');
+      if (registerTab) registerTab.classList.add('active');
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      if (loginForm) loginForm.style.display = 'none';
+      if (registerForm) registerForm.style.display = 'block';
+    }
+
+    async function hasSession() {
+      if (!supabaseClient) return false;
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      return !!session;
+    }
+
+    window.comprarDorama = async function(title) {
       currentPurchaseTitle = title;
+      if (!(await hasSession())) {
+        window.pendingPurchaseTitle = title;
+        window.pendingCheckout = true;
+        askToCreateAccount();
+        return;
+      }
       document.getElementById('checkoutTitle').textContent = title;
       document.getElementById('checkoutModal').classList.add('open');
       document.getElementById('checkoutForm').style.display = 'block';
@@ -3041,6 +3059,12 @@
 
     document.getElementById('gerarPixBtn').onclick = async () => {
       if (pixInFlight) return;
+      if (!(await hasSession())) {
+        window.pendingCheckout = true;
+        if (currentPurchaseTitle && !cart.includes(currentPurchaseTitle)) window.pendingPurchaseTitle = currentPurchaseTitle;
+        askToCreateAccount();
+        return;
+      }
       const btn = document.getElementById('gerarPixBtn');
       pixInFlight = true;
       btn.disabled = true;
@@ -3468,11 +3492,18 @@
     };
 
     function openCheckoutAfterAuth() {
-      if (!window.pendingCheckout || !cart.length) return;
+      if (!window.pendingCheckout || !supabaseClient) return;
       window.pendingCheckout = false;
-      currentPurchaseTitle = cart.join(', ');
-      document.getElementById('checkoutTitle').textContent = cart.length + ' dorama(s)';
-      document.getElementById('checkoutPrice').textContent = 'R$ ' + calcPrice(cart.length).toFixed(2).replace('.', ',');
+      const title = window.pendingPurchaseTitle;
+      window.pendingPurchaseTitle = null;
+      if (title && !cart.length) {
+        currentPurchaseTitle = title;
+        document.getElementById('checkoutTitle').textContent = title;
+      } else if (cart.length) {
+        currentPurchaseTitle = cart.join(', ');
+        document.getElementById('checkoutTitle').textContent = cart.length + ' dorama(s)';
+        document.getElementById('checkoutPrice').textContent = 'R$ ' + calcPrice(cart.length).toFixed(2).replace('.', ',');
+      } else return;
       document.getElementById('checkoutModal').classList.add('open');
       document.getElementById('checkoutForm').style.display = 'block';
       document.getElementById('pixResult').style.display = 'none';
