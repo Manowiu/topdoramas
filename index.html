@@ -2672,7 +2672,7 @@
       
       // Já logado → abre o checkout
       document.getElementById('cartModal').classList.remove('open');
-      currentPurchaseTitle = cart.join(', ');
+      currentPurchaseTitle = cart.join(' || ');
       document.getElementById('checkoutTitle').textContent = cart.length + ' dorama(s)';
       document.getElementById('checkoutPrice').textContent = 'R$ ' + calcPrice(cart.length).toFixed(2).replace('.', ',');
       document.getElementById('checkoutModal').classList.add('open');
@@ -2995,7 +2995,7 @@
     }
 
     function checkoutEventParams() {
-      const titles = (currentPurchaseTitle || cart.join(', ')).split(', ').filter(Boolean);
+      const titles = (currentPurchaseTitle || cart.join(' || ')).split(' || ').filter(Boolean);
       const qty = titles.length || cart.length || 1;
       const value = window.vipCheckoutPlan && VIP_PLANS[window.vipCheckoutPlan]
         ? VIP_PLANS[window.vipCheckoutPlan].price
@@ -3070,6 +3070,7 @@
         return null;
       }
 
+      const { data: { session } } = supabaseClient ? await supabaseClient.auth.getSession() : { data: { session: null } };
       const amount = Number((window.vipCheckoutPlan ? VIP_PLANS[window.vipCheckoutPlan].price : calcPrice(cart.length || 1)).toFixed(2));
       const body = {
         amount,
@@ -3077,7 +3078,12 @@
         description: (currentPurchaseTitle || 'TopDoramas').slice(0, 120),
         product: { name: (currentPurchaseTitle || 'TopDoramas').slice(0, 80) },
         order_reference: currentPurchaseTitle || 'TopDoramas',
-        metadata: { dorama_title: currentPurchaseTitle || 'TopDoramas', phone },
+        metadata: {
+          dorama_title: currentPurchaseTitle || 'TopDoramas',
+          phone,
+          account_email: session?.user?.email || email,
+          user_id: session?.user?.id || ''
+        },
         payment_method: method
       };
       if (method === 'card') {
@@ -3127,7 +3133,8 @@
       try {
         const data = await criarPagamentoS6X('pix');
         if (!data || !data.pix) return;
-        pendingTxId = data.transaction_id || data.id || data.transactionId || data.payment_id || data.uuid || data.payment?.id || data.pix?.transaction_id || data.pix?.id || null;
+        pendingTxId = findTransactionId(data);
+        if (!pendingTxId) document.getElementById('pixStatus').textContent = 'PIX gerado, mas sem código de confirmação.';
         trackMeta('AddPaymentInfo', checkoutEventParams());
         document.getElementById('checkoutForm').style.display = 'none';
         document.getElementById('pixResult').style.display = 'block';
@@ -3170,8 +3177,29 @@
       }
     };
 
+    function findTransactionId(value) {
+      const preferred = ['transaction_id', 'transactionId', 'payment_id', 'paymentId', 'id', 'uuid', 'txid'];
+      const stack = [value];
+      const seen = new Set();
+      while (stack.length) {
+        const current = stack.pop();
+        if (!current || typeof current !== 'object' || seen.has(current)) continue;
+        seen.add(current);
+        for (const key of preferred) {
+          const found = current[key];
+          if (typeof found === 'string' && found.length > 6 && !found.startsWith('000201')) return found;
+        }
+        Object.values(current).forEach(item => {
+          if (item && typeof item === 'object') stack.push(item);
+        });
+      }
+      const pix = value?.pix?.copy_paste || value?.pix?.qr_code || '';
+      const uuid = String(pix).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+      return uuid ? uuid[0] : null;
+    }
+
     async function unlockConfirmedPurchase() {
-      const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
+      const titles = String(currentPurchaseTitle || '').includes(' || ') ? String(currentPurchaseTitle).split(' || ').map(t => t.trim()).filter(Boolean) : [String(currentPurchaseTitle || '').trim()].filter(Boolean);
       const planId = window.vipCheckoutPlan;
       const isVip = !!planId || titles.some(title => title.startsWith('Assinatura VIP'));
       const userId = window.currentUserId || await getCurrentUserId();
@@ -3616,7 +3644,7 @@
         currentPurchaseTitle = title;
         document.getElementById('checkoutTitle').textContent = title;
       } else if (cart.length) {
-        currentPurchaseTitle = cart.join(', ');
+        currentPurchaseTitle = cart.join(' || ');
         document.getElementById('checkoutTitle').textContent = cart.length + ' dorama(s)';
         document.getElementById('checkoutPrice').textContent = 'R$ ' + calcPrice(cart.length).toFixed(2).replace('.', ',');
       } else return;
@@ -3656,7 +3684,7 @@
       const refreshed = await supabaseClient.auth.refreshSession();
       const session = refreshed.data?.session || (await supabaseClient.auth.getSession()).data.session;
       if (!session) return null;
-      const titles = (currentPurchaseTitle || '').split(', ').map(t => t.trim()).filter(Boolean);
+      const titles = String(currentPurchaseTitle || '').includes(' || ') ? String(currentPurchaseTitle).split(' || ').map(t => t.trim()).filter(Boolean) : [String(currentPurchaseTitle || '').trim()].filter(Boolean);
       const owned = Array.isArray(session.user.user_metadata?.owned_titles) ? session.user.user_metadata.owned_titles : [];
       const vipPaid = window.vipCheckoutPlan && (session.user.user_metadata?.vip === true || owned.some(t => String(t).startsWith('Assinatura VIP')));
       if (vipPaid || titles.some(t => owned.includes(t))) {
@@ -3731,7 +3759,8 @@
         const library = getLibrary(userId);
         let changed = false;
         data.forEach(p => {
-          const titles = String(p.dorama_title || '').split(', ').map(t => t.trim()).filter(Boolean);
+          const rawTitle = String(p.dorama_title || '');
+          const titles = rawTitle.includes(' || ') ? rawTitle.split(' || ').map(t => t.trim()).filter(Boolean) : [rawTitle.trim()].filter(Boolean);
           titles.forEach(title => {
             if (!library.includes(title)) {
               library.push(title);

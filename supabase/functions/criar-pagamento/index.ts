@@ -94,13 +94,24 @@ async function checkStatus(body: { transaction_id?: string, email?: string, user
     return json({ success: false, error: 'Transação obrigatória' }, 400)
   }
 
-  const res = await fetch(`https://s6xpay.com/api/v1/payments/${encodeURIComponent(transactionId)}`, {
-    headers: {
-      'X-Client-Id': S6X_CLIENT_ID,
-      'X-Client-Secret': S6X_CLIENT_SECRET,
-    },
-  })
-  const data = await res.json()
+  const urls = [
+    `https://s6xpay.com/api/v1/payments/${encodeURIComponent(transactionId)}`,
+    `https://s6xpay.com/api/v1/transactions/${encodeURIComponent(transactionId)}`,
+    `https://s6xpay.com/api/v1/payments?transaction_id=${encodeURIComponent(transactionId)}`
+  ]
+  let data: any = null
+  for (const url of urls) {
+    const res = await fetch(url, {
+      headers: {
+        'X-Client-Id': S6X_CLIENT_ID,
+        'X-Client-Secret': S6X_CLIENT_SECRET,
+      },
+    })
+    if (!res.ok) continue
+    data = await res.json()
+    if (data) break
+  }
+  data = data || {}
   const status = String(
     data.status || data.data?.status || data.payment?.status || data.data?.payment?.status || ''
   ).toLowerCase()
@@ -110,9 +121,12 @@ async function checkStatus(body: { transaction_id?: string, email?: string, user
     || status.includes('approv')
     || data.paid === true
     || data.data?.paid === true
-  if (paid && (body.email || body.user_id) && body.title) {
-    const titles = String(body.title).split(', ').map(t => t.trim()).filter(Boolean)
-    await grantAccess(body.email, body.user_id, titles)
+    || !!data.paid_at
+    || !!data.data?.paid_at
+  if (paid && body.title) {
+    const titles = String(body.title).includes(' || ') ? String(body.title).split(' || ') : [String(body.title)]
+    const cleanTitles = titles.map(t => t.trim()).filter(Boolean)
+    await grantAccess(body.email, body.user_id, cleanTitles)
     await sendMetaPurchase(body.email, body.title, transactionId, Number(body.value || 0))
   }
   return json({ success: true, paid, status, data })

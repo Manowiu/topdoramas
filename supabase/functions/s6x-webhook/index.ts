@@ -87,17 +87,19 @@ Deno.serve(async (req) => {
   const status = payload.status || payload.data?.status
   const metadata = payload.metadata || payload.data?.metadata || {}
   const orderRef = metadata.dorama_title || metadata.order_reference || payload.order_reference || payload.data?.order_reference || payload.description || payload.data?.description
-  const customerEmail = payload.customer?.email || payload.data?.customer?.email
+  const customerEmail = metadata.account_email || payload.customer?.email || payload.data?.customer?.email
+  const statusText = String(status || event || '').toLowerCase()
+  const isPaid = ['payment.confirmed', 'card.payment.confirmed', 'paid', 'approved', 'completed'].includes(statusText)
+    || statusText.includes('paid')
+    || statusText.includes('confirm')
 
-  // Só processa pagamentos confirmados
-  const isPaid = event === 'payment.confirmed' || event === 'card.payment.confirmed' || status === 'paid'
-
-  if (!isPaid || !orderRef) {
-    return new Response(JSON.stringify({ received: true, processed: false }), { status: 200 })
+  if (!isPaid || !orderRef || !customerEmail) {
+    return new Response(JSON.stringify({ received: true, processed: false, event, status }), { status: 200 })
   }
 
-  // Salva a compra na tabela purchases
-  const titles = String(orderRef || '').split(', ').map(t => t.trim()).filter(Boolean)
+  const titles = String(orderRef).includes(' || ')
+    ? String(orderRef).split(' || ').map(t => t.trim()).filter(Boolean)
+    : [String(orderRef).trim()]
   const isVipPlan = titles.some(title => title.startsWith('Assinatura VIP'))
   let error = null
   for (const title of titles) {
