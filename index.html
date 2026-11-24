@@ -2147,6 +2147,7 @@
         modal.classList.add('open');
         const infoUrl = `https://nixplay.lat/player_api.php?username=${encodeURIComponent(NIX_USER)}&password=${encodeURIComponent(NIX_PASS)}&action=get_series_info&series_id=${item.series_id}`;
         fetch(infoUrl).then(r => r.json()).then(info => {
+          const seasons = info.episodes || info.seasons || {};
           const tmdb = item.id_tmdb || item.tmdb_id || item.series_id;
           const leg = /\[L\]|legendado/i.test(item.title || '');
           const episodes = [];
@@ -2154,14 +2155,19 @@
             (seasons[season] || []).forEach(ep => {
               const n = ep.episode_num || ep.episode || episodes.length + 1;
               const episodeTmdb = ep.id_tmdb || ep.tmdb_id || tmdb;
+              const lang = leg ? '?lang=leg&economy=1' : '?economy=1';
               episodes.push({
                 season,
                 episode: n,
                 language: leg ? 'Legendado' : 'Dublado',
-                stream_url: `https://nixplay.lat/series/${NIX_USER}/${NIX_PASS}/${episodeTmdb}/${season}/${n}.mp4` + (leg ? '?lang=leg' : '')
+                stream_url: `https://nixplay.lat/series/${NIX_USER}/${NIX_PASS}/${episodeTmdb}/${season}/${n}.mp4${lang}`
               });
             });
           });
+          if (!episodes.length) {
+            document.getElementById('modalOverview').textContent = 'Essa série não tem episódios disponíveis agora.';
+            return;
+          }
           item.episodes = episodes;
           item.synopsis = item.synopsis || (info.info && info.info.plot) || '';
           openVod(item);
@@ -2265,7 +2271,7 @@
           return {
             ...item,
             title: item.title || item.name,
-            stream_url: tmdb ? `https://nixplay.lat/movie/${NIX_USER}/${NIX_PASS}/${tmdb}.mp4` + (leg ? '?lang=leg' : '') : item.stream_url
+            stream_url: tmdb ? `https://nixplay.lat/movie/${NIX_USER}/${NIX_PASS}/${tmdb}.mp4` + (leg ? '?lang=leg&economy=1' : '?economy=1') : item.stream_url
           };
         });
         vodItems = append ? vodItems.concat(data) : data;
